@@ -93,7 +93,7 @@
             History: (p) => <Icon d="M3 3v5h5 M3.05 13A9 9 0 1 0 6 5.3L3 8" {...p} />
         };
 
-        // --- TTS Helper (Improved Thai with Name) ---
+        // --- TTS Helper ---
         const announceQueue = (queueNumber, customerName) => {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
@@ -232,27 +232,42 @@
                 };
             }, [services, user]); 
 
+            // --- Updated Notification Logic (Checks for new call time) ---
             useEffect(() => {
                 if (!myQueueId || queues.length === 0) return;
                 const myQ = queues.find(q => q.id === myQueueId);
                 
-                if (myQ && myQ.status === 'serving' && lastAnnouncedMyQueueRef.current !== myQ.id) {
-                    try {
-                        if ('Notification' in window && Notification.permission === 'granted') {
-                             new Notification("ถึงคิวของคุณแล้ว!", { body: `หมายเลข ${myQ.number}`, icon: '' });
-                        }
-                    } catch (e) {}
-                    if (viewMode === 'kiosk') announceQueue(myQ.number, myQ.name);
-                    lastAnnouncedMyQueueRef.current = myQ.id;
+                if (myQ && myQ.status === 'serving') {
+                    // Check if it's a new call based on timestamp or ID
+                    const lastPlayed = lastAnnouncedMyQueueRef.current;
+                    const isNewCall = !lastPlayed || lastPlayed.id !== myQ.id || lastPlayed.calledAt !== myQ.calledAt;
+
+                    if (isNewCall) {
+                        try {
+                            if ('Notification' in window && Notification.permission === 'granted') {
+                                 new Notification("ถึงคิวของคุณแล้ว!", { body: `หมายเลข ${myQ.number}`, icon: '' });
+                            }
+                        } catch (e) {}
+                        if (viewMode === 'kiosk') announceQueue(myQ.number, myQ.name);
+                        
+                        lastAnnouncedMyQueueRef.current = { id: myQ.id, calledAt: myQ.calledAt };
+                    }
                 }
             }, [queues, myQueueId, viewMode]);
 
+            // --- Updated Public Announcement Logic (Checks for new call time) ---
             useEffect(() => {
                 if (viewMode !== 'display' || queues.length === 0) return;
                 const currentServing = queues.find(q => q.status === 'serving');
-                if (currentServing && lastAnnouncedDisplayRef.current !== currentServing.id) {
-                    setTimeout(() => announceQueue(currentServing.number, currentServing.name), 500);
-                    lastAnnouncedDisplayRef.current = currentServing.id;
+                
+                if (currentServing) {
+                    const lastPlayed = lastAnnouncedDisplayRef.current;
+                    const isNewCall = !lastPlayed || lastPlayed.id !== currentServing.id || lastPlayed.calledAt !== currentServing.calledAt;
+
+                    if (isNewCall) {
+                        setTimeout(() => announceQueue(currentServing.number, currentServing.name), 500);
+                        lastAnnouncedDisplayRef.current = { id: currentServing.id, calledAt: currentServing.calledAt };
+                    }
                 }
             }, [queues, viewMode]);
 
@@ -305,6 +320,7 @@
                         : services.db.collection('queues').doc(id);
                     
                     const updateData = { status };
+                    // Update timestamp on serving to trigger announcement
                     if (status === 'serving') {
                         updateData.calledAt = Date.now();
                     }
@@ -313,6 +329,7 @@
                 } catch (err) { console.error(err); }
             };
 
+            // --- Updated Recall Handler ---
             const handleRecall = async (id) => {
                 if (!user) return;
                 try {
@@ -320,6 +337,7 @@
                         ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('queues').doc(id)
                         : services.db.collection('queues').doc(id);
                     
+                    // Force update calledAt to trigger effects
                     await docRef.update({ 
                         status: 'serving', 
                         calledAt: Date.now() 
@@ -406,7 +424,6 @@
                                         {myQueue.status === 'waiting' ? <><Icons.Clock size={20}/> กำลังรอเรียก...</> : <><Icons.Volume size={20}/> ถึงคิวคุณแล้ว!</>}
                                     </div>
                                     
-                                    {/* Added Stats Section for User */}
                                     <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 space-y-4">
                                         <div className="flex justify-between items-end border-b border-slate-200 pb-3">
                                             <div className="text-left">

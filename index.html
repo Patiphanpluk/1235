@@ -32,24 +32,32 @@
         const { useState, useEffect, useRef } = React;
         
         // ==========================================
-        // 1. ตั้งค่า FIREBASE ของคุณ
+        // 1. ตั้งค่า FIREBASE ของคุณตรงนี้
+        // (อัปเดตเป็นค่าใหม่ล่าสุดแล้วครับ)
         // ==========================================
         const YOUR_FIREBASE_CONFIG = {
-            apiKey: "AIzaSyA5DOlMXP9IedzosXcFls3kvbvdKyQGjGk",
-            authDomain: "project-901413547666359240.firebaseapp.com",
-            databaseURL: "https://project-901413547666359240-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "project-901413547666359240",
-            storageBucket: "project-901413547666359240.firebasestorage.app",
-            messagingSenderId: "321646066089",
-            appId: "1:321646066089:web:9f565ce9ca38d5516c6cb8",
-            measurementId: "G-8SQYEJ2MHD"
+            apiKey: "AIzaSyBsN1ACDYvJzoVc6mhtu9n-HNi1KDNFV24",
+            authDomain: "project-6337867036145290950.firebaseapp.com",
+            projectId: "project-6337867036145290950",
+            storageBucket: "project-6337867036145290950.firebasestorage.app",
+            messagingSenderId: "298203222498",
+            appId: "1:298203222498:web:b3ef416d58b79c748ba9bb",
+            measurementId: "G-1LJY6YJQBZ"
         };
         // ==========================================
 
         const initFirebase = () => {
             let config;
-            if (typeof __firebase_config !== 'undefined') {
-                config = JSON.parse(__firebase_config);
+            
+            // ตรวจสอบว่าผู้ใช้ใส่ค่า Config หรือยัง
+            if (YOUR_FIREBASE_CONFIG.apiKey === "วาง_API_KEY_ที่นี่" || YOUR_FIREBASE_CONFIG.apiKey === "") {
+                 // ถ้ายังไม่ใส่ ให้ลองใช้ Environment Config (เผื่อรันในระบบ Demo)
+                 if (typeof __firebase_config !== 'undefined') {
+                    config = JSON.parse(__firebase_config);
+                 } else {
+                    // ถ้าไม่มีทั้งสองอย่าง ให้โยน Error เพื่อแจ้งเตือน
+                    throw new Error("PLEASE_SETUP_FIREBASE");
+                 }
             } else {
                 config = YOUR_FIREBASE_CONFIG;
             }
@@ -137,8 +145,14 @@
                         } else {
                             try {
                                 // Attempt to sign in
+                                // แก้ไข: ถ้ามี Token ให้ลองใช้ แต่ถ้าเป็นโปรเจกต์ส่วนตัวมันจะ Error ก็จะเด้งไป catch เพื่อใช้ Anonymous
                                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                                    await auth.signInWithCustomToken(__initial_auth_token);
+                                    try {
+                                        await auth.signInWithCustomToken(__initial_auth_token);
+                                    } catch (tokenErr) {
+                                        console.warn("Custom token mismatch (Using custom project?), falling back to anonymous.");
+                                        await auth.signInAnonymously();
+                                    }
                                 } else {
                                     await auth.signInAnonymously();
                                 }
@@ -172,10 +186,12 @@
                 
                 let collectionRef;
                 if (typeof __app_id !== 'undefined') {
+                     // Running in Chat Environment (ใช้ Path แบบ Demo เพื่อความสะดวก)
                      collectionRef = services.db.collection('artifacts').doc(appId)
                             .collection('public').doc('data')
                             .collection('queues');
                 } else {
+                     // Running on GitHub / Localhost (ใช้ Path ปกติ)
                      collectionRef = services.db.collection('queues');
                 }
 

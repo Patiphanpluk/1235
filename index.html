@@ -98,18 +98,15 @@
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
 
-                // แปลง A-001 เป็นคำอ่านไทย
                 const parts = queueNumber.split('-');
                 let spokenText = "ขอเชิญหมายเลข ";
                 
-                // อ่าน Prefix
                 if (parts[0]) {
                     if (parts[0] === 'A') spokenText += "เอ ";
                     else if (parts[0] === 'B') spokenText += "บี ";
                     else spokenText += parts[0] + " ";
                 }
 
-                // อ่านตัวเลขทีละตัว
                 if (parts[1]) {
                     for (let char of parts[1]) {
                         if (char === '0') spokenText += "ศูนย์ ";
@@ -151,7 +148,6 @@
         );
 
         function App() {
-            // State
             const [viewMode, setViewMode] = useState('admin');
             const [queues, setQueues] = useState([]);
             const [myQueueId, setMyQueueId] = useState(() => localStorage.getItem('my_queue_id'));
@@ -164,17 +160,15 @@
             const [errorMsg, setErrorMsg] = useState('');
             const [audioEnabled, setAudioEnabled] = useState(false);
             
-            // New States for Features
             const [queuePrefix, setQueuePrefix] = useState('A'); 
             const [showSettings, setShowSettings] = useState(false);
             const [showHistory, setShowHistory] = useState(null); 
             
             const lastAnnouncedMyQueueRef = useRef(null);
-            const lastAnnouncedDisplayRef = useRef(null); // เก็บ Object {id, calledAt}
+            const lastAnnouncedDisplayRef = useRef(null);
             
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'my-queue-app';
 
-            // Init Effect
             useEffect(() => {
                 try {
                     const { auth, db } = initFirebase();
@@ -207,11 +201,9 @@
                 }
             }, []);
 
-            // Data Sync & Settings Sync
             useEffect(() => {
                 if (!services?.db || !user) return; 
                 
-                // 1. Queue Sync
                 let collectionRef = (typeof __app_id !== 'undefined') 
                     ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('queues')
                     : services.db.collection('queues');
@@ -224,7 +216,6 @@
                     setLoading(false);
                 }, err => { if (err.code !== 'permission-denied') console.error(err); setLoading(false); });
 
-                // 2. Settings Sync (ดึงการตั้งค่าแบบ Realtime)
                 let settingsRef = (typeof __app_id !== 'undefined')
                     ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('settings').doc('main')
                     : services.db.collection('settings').doc('main');
@@ -241,43 +232,27 @@
                 };
             }, [services, user]); 
 
-            // Notification Logic (Client Side)
             useEffect(() => {
                 if (!myQueueId || queues.length === 0) return;
                 const myQ = queues.find(q => q.id === myQueueId);
                 
-                // แจ้งเตือนเมื่อสถานะเป็น serving และยังไม่เคยแจ้ง (ดูจาก calledAt เพื่อรองรับเรียกซ้ำ)
-                if (myQ && myQ.status === 'serving') {
-                    const lastPlayed = lastAnnouncedMyQueueRef.current;
-                    const isNewCall = !lastPlayed || lastPlayed.id !== myQ.id || lastPlayed.calledAt !== myQ.calledAt;
-
-                    if (isNewCall) {
-                        try {
-                            if ('Notification' in window && Notification.permission === 'granted') {
-                                new Notification("ถึงคิวของคุณแล้ว!", { body: `หมายเลข ${myQ.number}`, icon: '' });
-                            }
-                        } catch (e) {}
-                        if (viewMode === 'kiosk') announceQueue(myQ.number, myQ.name);
-                        
-                        lastAnnouncedMyQueueRef.current = { id: myQ.id, calledAt: myQ.calledAt };
-                    }
+                if (myQ && myQ.status === 'serving' && lastAnnouncedMyQueueRef.current !== myQ.id) {
+                    try {
+                        if ('Notification' in window && Notification.permission === 'granted') {
+                             new Notification("ถึงคิวของคุณแล้ว!", { body: `หมายเลข ${myQ.number}`, icon: '' });
+                        }
+                    } catch (e) {}
+                    if (viewMode === 'kiosk') announceQueue(myQ.number, myQ.name);
+                    lastAnnouncedMyQueueRef.current = myQ.id;
                 }
             }, [queues, myQueueId, viewMode]);
 
-            // Public Announcement Logic (Display Mode)
             useEffect(() => {
                 if (viewMode !== 'display' || queues.length === 0) return;
                 const currentServing = queues.find(q => q.status === 'serving');
-                
-                if (currentServing) {
-                    const lastPlayed = lastAnnouncedDisplayRef.current;
-                    // ตรวจสอบว่าเป็นการเรียกครั้งใหม่หรือไม่ (ดูจาก ID หรือ Timestamp calledAt)
-                    const isNewCall = !lastPlayed || lastPlayed.id !== currentServing.id || lastPlayed.calledAt !== currentServing.calledAt;
-
-                    if (isNewCall) {
-                        setTimeout(() => announceQueue(currentServing.number, currentServing.name), 500);
-                        lastAnnouncedDisplayRef.current = { id: currentServing.id, calledAt: currentServing.calledAt };
-                    }
+                if (currentServing && lastAnnouncedDisplayRef.current !== currentServing.id) {
+                    setTimeout(() => announceQueue(currentServing.number, currentServing.name), 500);
+                    lastAnnouncedDisplayRef.current = currentServing.id;
                 }
             }, [queues, viewMode]);
 
@@ -285,8 +260,6 @@
                 const audio = new Audio('');
                 audio.play().then(() => { setAudioEnabled(true); announceQueue("A-000", "ทดสอบ"); }).catch(() => setAudioEnabled(true));
             };
-
-            // --- Actions ---
 
             const handleBookQueue = async (e) => {
                 e.preventDefault();
@@ -331,8 +304,6 @@
                         ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('queues').doc(id)
                         : services.db.collection('queues').doc(id);
                     
-                    // เมื่อเปลี่ยนสถานะเป็น serving หรือกดเรียกซ้ำ ให้บันทึกเวลา calledAt ใหม่เสมอ
-                    // เพื่อ Trigger ให้ Display รู้ว่ามีการเรียก
                     const updateData = { status };
                     if (status === 'serving') {
                         updateData.calledAt = Date.now();
@@ -342,7 +313,6 @@
                 } catch (err) { console.error(err); }
             };
 
-            // ฟังก์ชันสำหรับเรียกซ้ำ (Recall) โดยไม่อัปเดตสถานะ (แค่อัปเดตเวลาให้ Trigger เสียง)
             const handleRecall = async (id) => {
                 if (!user) return;
                 try {
@@ -352,7 +322,7 @@
                     
                     await docRef.update({ 
                         status: 'serving', 
-                        calledAt: Date.now() // Update timestamp to trigger useEffect
+                        calledAt: Date.now() 
                     });
                     setShowHistory(null);
                 } catch (err) { console.error(err); }
@@ -396,18 +366,14 @@
                 window.open(url.toString(), '_blank');
             };
 
-            // --- Helpers ---
             const waitingQueues = queues.filter(q => q.status === 'waiting');
             const currentServing = queues.find(q => q.status === 'serving');
             const myQueue = queues.find(q => q.id === myQueueId);
-            
-            // History Filters
             const historyList = showHistory ? queues.filter(q => q.status === showHistory) : [];
 
             if (configError) return <SetupError errorMsg={errorMsg} />;
             if (loading) return <div className="h-screen flex items-center justify-center text-slate-400">กำลังเชื่อมต่อระบบ...</div>;
 
-            // --- KIOSK MODE ---
             if (viewMode === 'kiosk') {
                 return (
                     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4">
@@ -439,6 +405,29 @@
                                     <div className={`inline-flex items-center gap-2 px-6 py-3 rounded-full font-bold shadow-sm ${myQueue.status === 'waiting' ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600 animate-pulse'}`}>
                                         {myQueue.status === 'waiting' ? <><Icons.Clock size={20}/> กำลังรอเรียก...</> : <><Icons.Volume size={20}/> ถึงคิวคุณแล้ว!</>}
                                     </div>
+                                    
+                                    {/* Added Stats Section for User */}
+                                    <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 space-y-4">
+                                        <div className="flex justify-between items-end border-b border-slate-200 pb-3">
+                                            <div className="text-left">
+                                                <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">คิวปัจจุบัน</div>
+                                                <div className="text-3xl font-black text-indigo-600 leading-none">
+                                                    {currentServing ? currentServing.number : '--'}
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">รออีก (คิว)</div>
+                                                <div className="text-3xl font-black text-slate-700 leading-none">
+                                                    {queues.filter(q => q.status === 'waiting' && q.createdAt < myQueue.createdAt).length}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm pt-1">
+                                            <span className="text-slate-400">ชื่อผู้จอง</span>
+                                            <span className="font-bold text-slate-700 truncate max-w-[150px]">{myQueue.name}</span>
+                                        </div>
+                                    </div>
+
                                     {myQueue.status === 'serving' && <div className="text-green-600 font-bold animate-bounce-slow">เชิญเข้ารับบริการค่ะ</div>}
                                     <button onClick={() => {localStorage.removeItem('my_queue_id'); setMyQueueId(null);}} className="text-slate-400 text-sm hover:text-slate-600 underline">จองคิวใหม่ / ออกจากหน้านี้</button>
                                 </div>
@@ -448,7 +437,6 @@
                 );
             }
 
-            // --- DISPLAY MODE ---
             if (viewMode === 'display') {
                 return (
                     <div className="min-h-screen flex items-center justify-center p-8 bg-slate-100">
@@ -486,7 +474,6 @@
                 );
             }
 
-            // --- ADMIN MODE ---
             return (
                 <div className="min-h-screen bg-slate-50 pb-10">
                     <div className="bg-white border-b border-slate-200 sticky top-0 z-50 px-4 py-3 shadow-sm">
@@ -559,7 +546,6 @@
                         </div>
                     </main>
 
-                    {/* Settings Modal */}
                     {showSettings && (
                         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                             <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-fade-in">
@@ -574,7 +560,6 @@
                         </div>
                     )}
 
-                    {/* History Modal */}
                     {showHistory && (
                         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                             <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl animate-fade-in h-[80vh] flex flex-col">

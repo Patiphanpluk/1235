@@ -23,6 +23,15 @@
         .animate-bounce-slow { animation: bounce 2s infinite; }
         @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes bounce { 0%, 100% { transform: translateY(-5%); } 50% { transform: translateY(0); } }
+        
+        /* ซ่อน Scrollbar แต่ยังเลื่อนได้ */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
@@ -32,8 +41,7 @@
         const { useState, useEffect, useRef } = React;
         
         // ==========================================
-        // 1. ตั้งค่า FIREBASE ของคุณตรงนี้
-        // (อัปเดตเป็นค่าใหม่ล่าสุดแล้วครับ)
+        // 1. ตั้งค่า FIREBASE Config (ค่าของคุณ)
         // ==========================================
         const YOUR_FIREBASE_CONFIG = {
             apiKey: "AIzaSyBsN1ACDYvJzoVc6mhtu9n-HNi1KDNFV24",
@@ -48,14 +56,10 @@
 
         const initFirebase = () => {
             let config;
-            
-            // ตรวจสอบว่าผู้ใช้ใส่ค่า Config หรือยัง
             if (YOUR_FIREBASE_CONFIG.apiKey === "วาง_API_KEY_ที่นี่" || YOUR_FIREBASE_CONFIG.apiKey === "") {
-                 // ถ้ายังไม่ใส่ ให้ลองใช้ Environment Config (เผื่อรันในระบบ Demo)
                  if (typeof __firebase_config !== 'undefined') {
                     config = JSON.parse(__firebase_config);
                  } else {
-                    // ถ้าไม่มีทั้งสองอย่าง ให้โยน Error เพื่อแจ้งเตือน
                     throw new Error("PLEASE_SETUP_FIREBASE");
                  }
             } else {
@@ -90,7 +94,28 @@
             Cross: (p) => <Icon d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20 M15 9l-6 6 M9 9l6 6" {...p} />,
             Volume: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||24} height={p.size||24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={p.className}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>,
             Link: (p) => <Icon d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6 M15 3h6v6 M10 14L21 3" {...p} />,
-            Alert: (p) => <Icon d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z M12 9v4 M12 17h.01" {...p} />
+            Alert: (p) => <Icon d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z M12 9v4 M12 17h.01" {...p} />,
+            Loader: (p) => <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>,
+            Play: (p) => <Icon d="M5 3l14 9-14 9V3z" {...p} />
+        };
+
+        // --- Helper: Text-to-Speech ---
+        const announceQueue = (queueNumber, customerName) => {
+            if ('speechSynthesis' in window) {
+                // ยกเลิกเสียงที่พูดค้างอยู่ (ถ้ามี)
+                window.speechSynthesis.cancel();
+
+                // ข้อความที่จะพูด
+                const text = `ขอเชิญหมายเลข ${queueNumber}, คุณ${customerName}, ที่ช่องบริการค่ะ`;
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'th-TH'; // ภาษาไทย
+                utterance.rate = 0.9; // ความเร็วปกติ
+                utterance.pitch = 1; 
+                utterance.volume = 1;
+
+                window.speechSynthesis.speak(utterance);
+            }
         };
 
         // --- Setup Error Component ---
@@ -102,18 +127,9 @@
                     <p className="text-slate-600 mb-6 font-mono text-sm bg-slate-100 p-2 rounded break-all">
                         {errorMsg || "ไม่สามารถเชื่อมต่อกับ Firebase ได้"}
                     </p>
-                    <div className="text-left text-sm text-slate-700 bg-orange-50 p-4 rounded-xl border border-orange-100">
-                        <p className="font-bold mb-2">วิธีแก้ไขเบื้องต้น:</p>
-                        <ul className="list-disc list-inside space-y-1">
-                            <li>ไปที่ <b>Firebase Console</b> > <b>Authentication</b> > <b>Sign-in method</b> แล้วเปิดใช้งาน <b>Anonymous</b></li>
-                            <li>ไปที่ <b>Firestore Database</b> > <b>Rules</b> และตรวจสอบว่าอนุญาตให้อ่านเขียนได้ (เช่น <code>allow read, write: if true;</code> สำหรับทดสอบ)</li>
-                        </ul>
-                    </div>
-                    <div className="mt-6">
-                        <a href="https://console.firebase.google.com/" target="_blank" className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors">
-                            ไปที่ Firebase Console
-                        </a>
-                    </div>
+                    <a href="https://console.firebase.google.com/" target="_blank" className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors">
+                        ไปที่ Firebase Console
+                    </a>
                 </div>
             </div>
         );
@@ -125,10 +141,16 @@
             const [myQueueId, setMyQueueId] = useState(() => localStorage.getItem('my_queue_id'));
             const [customerName, setCustomerName] = useState('');
             const [loading, setLoading] = useState(true);
+            const [isSubmitting, setIsSubmitting] = useState(false);
             const [services, setServices] = useState(null);
             const [user, setUser] = useState(null); 
             const [configError, setConfigError] = useState(false);
             const [errorMsg, setErrorMsg] = useState('');
+            const [audioEnabled, setAudioEnabled] = useState(false); // New: Track if user enabled audio
+            
+            // Refs สำหรับกันการพูดซ้ำ
+            const lastAnnouncedMyQueueRef = useRef(null);
+            const lastAnnouncedDisplayRef = useRef(null);
             
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'my-queue-app';
 
@@ -138,19 +160,16 @@
                     const { auth, db } = initFirebase();
                     setServices({ auth, db });
                     
-                    // 1. Auth Listener
                     const unsubAuth = auth.onAuthStateChanged(async (u) => {
                         if (u) {
                             setUser(u); 
                         } else {
                             try {
-                                // Attempt to sign in
-                                // แก้ไข: ถ้ามี Token ให้ลองใช้ แต่ถ้าเป็นโปรเจกต์ส่วนตัวมันจะ Error ก็จะเด้งไป catch เพื่อใช้ Anonymous
                                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                                     try {
                                         await auth.signInWithCustomToken(__initial_auth_token);
                                     } catch (tokenErr) {
-                                        console.warn("Custom token mismatch (Using custom project?), falling back to anonymous.");
+                                        console.warn("Fallback to anonymous auth");
                                         await auth.signInAnonymously();
                                     }
                                 } else {
@@ -165,7 +184,6 @@
                         }
                     });
 
-                    // 2. Check URL Parameter
                     const params = new URLSearchParams(window.location.search);
                     const mode = params.get('mode');
                     if (mode === 'kiosk') setViewMode('kiosk');
@@ -180,18 +198,16 @@
                 }
             }, []);
 
-            // Data Sync Effect (Runs ONLY when user is authenticated)
+            // Data Sync Effect
             useEffect(() => {
                 if (!services?.db || !user) return; 
                 
                 let collectionRef;
                 if (typeof __app_id !== 'undefined') {
-                     // Running in Chat Environment (ใช้ Path แบบ Demo เพื่อความสะดวก)
                      collectionRef = services.db.collection('artifacts').doc(appId)
                             .collection('public').doc('data')
                             .collection('queues');
                 } else {
-                     // Running on GitHub / Localhost (ใช้ Path ปกติ)
                      collectionRef = services.db.collection('queues');
                 }
 
@@ -202,44 +218,81 @@
                     setQueues(loaded);
                     setLoading(false);
                 }, err => {
-                    console.error("Sync error:", err);
+                    if (err.code !== 'permission-denied') console.error("Sync error:", err);
                     if (err.code === 'permission-denied') {
-                        setErrorMsg("Permission Denied: ตรวจสอบ Firestore Rules");
-                    } else {
-                        setErrorMsg("Sync Error: " + err.message);
+                        setErrorMsg("Permission Denied: ตรวจสอบ Rules");
+                        setConfigError(true);
                     }
-                    // Stop loading anyway so we can show the error
                     setLoading(false);
-                    setConfigError(true);
                 });
 
                 return () => unsub();
             }, [services, user]); 
 
-            // Notification Effect
+            // Notification & Sound Effect (Kiosk/Client Mode)
             useEffect(() => {
                 if (!myQueueId || queues.length === 0) return;
                 const myQ = queues.find(q => q.id === myQueueId);
                 
-                if (myQ && myQ.status === 'serving') {
-                    if (Notification.permission === 'granted') {
-                         new Notification("ถึงคิวของคุณแล้ว!", {
-                             body: `คิวที่ ${myQ.number} เชิญที่ช่องบริการ`,
-                             icon: 'https://cdn-icons-png.flaticon.com/512/3119/3119338.png'
-                         });
+                if (myQ && myQ.status === 'serving' && lastAnnouncedMyQueueRef.current !== myQ.id) {
+                    // 1. ส่ง Notification
+                    try {
+                        if ('Notification' in window && Notification.permission === 'granted') {
+                             new Notification("ถึงคิวของคุณแล้ว!", {
+                                 body: `คิวที่ ${myQ.number} เชิญที่ช่องบริการ`,
+                                 icon: 'https://cdn-icons-png.flaticon.com/512/3119/3119338.png'
+                             });
+                        }
+                    } catch (e) { console.log("Notification failed", e); }
+
+                    // 2. พูดเสียงเรียก (เฉพาะถ้าอยู่หน้า Kiosk)
+                    if (viewMode === 'kiosk') {
+                        announceQueue(myQ.number, myQ.name);
                     }
+
+                    lastAnnouncedMyQueueRef.current = myQ.id;
                 }
-            }, [queues, myQueueId]);
+            }, [queues, myQueueId, viewMode]);
+
+            // Sound Effect (Display Mode - Public Announcement)
+            useEffect(() => {
+                if (viewMode !== 'display' || queues.length === 0) return;
+                
+                const currentServing = queues.find(q => q.status === 'serving');
+                
+                if (currentServing && lastAnnouncedDisplayRef.current !== currentServing.id) {
+                    setTimeout(() => {
+                        announceQueue(currentServing.number, currentServing.name);
+                    }, 500);
+                    
+                    lastAnnouncedDisplayRef.current = currentServing.id;
+                }
+            }, [queues, viewMode]);
+
+            // --- Enable Audio Helper ---
+            const enableAudio = () => {
+                // Play silent sound to unlock audio context on iOS/Chrome
+                const audio = new Audio('');
+                audio.play().then(() => {
+                    setAudioEnabled(true);
+                    announceQueue("ทดสอบ", "ระบบเสียง");
+                }).catch(() => setAudioEnabled(true));
+            };
 
             // --- Actions ---
 
             const handleBookQueue = async (e) => {
                 e.preventDefault();
-                if (!customerName.trim() || !services || !user) return;
+                if (!customerName.trim()) { alert("กรุณากรอกชื่อ"); return; }
+                if (!services || !user) { alert("ระบบไม่พร้อมใช้งาน"); return; }
 
-                if (Notification.permission !== 'granted') {
-                    Notification.requestPermission();
-                }
+                setIsSubmitting(true);
+
+                try {
+                    if ('Notification' in window && Notification.permission !== 'granted') {
+                        Notification.requestPermission();
+                    }
+                } catch (e) {}
 
                 const maxNum = queues.reduce((max, q) => {
                     const n = parseInt(q.number.split('-')[1]);
@@ -247,14 +300,6 @@
                 }, 0);
                 const nextNum = String(maxNum + 1).padStart(3, '0');
                 const queueNumber = `A-${nextNum}`;
-
-                const newQueue = {
-                    number: queueNumber,
-                    name: customerName,
-                    status: 'waiting',
-                    createdAt: Date.now(),
-                    timestamp: new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})
-                };
 
                 try {
                     let collectionRef;
@@ -266,12 +311,21 @@
                          collectionRef = services.db.collection('queues');
                     }
 
-                    const ref = await collectionRef.add(newQueue);
+                    const ref = await collectionRef.add({
+                        number: queueNumber,
+                        name: customerName,
+                        status: 'waiting',
+                        createdAt: Date.now(),
+                        timestamp: new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})
+                    });
+                    
                     localStorage.setItem('my_queue_id', ref.id);
                     setMyQueueId(ref.id);
                     setCustomerName('');
                 } catch (err) {
-                    alert("Error booking queue: " + err.message);
+                    alert("Error: " + err.message);
+                } finally {
+                    setIsSubmitting(false);
                 }
             };
 
@@ -332,10 +386,16 @@
                                                 onChange={e => setCustomerName(e.target.value)}
                                                 className="w-full px-4 py-4 text-lg border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                                                 placeholder="เช่น คุณสมชาย"
+                                                disabled={isSubmitting}
                                             />
                                         </div>
-                                        <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl text-lg shadow-lg shadow-indigo-200 transition-all active:scale-95">
-                                            ยืนยันการจอง
+                                        <button 
+                                            type="submit" 
+                                            disabled={isSubmitting}
+                                            className={`w-full text-white font-bold py-4 rounded-xl text-lg shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2
+                                                ${isSubmitting ? 'bg-indigo-400 cursor-wait' : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'}`}
+                                        >
+                                            {isSubmitting ? <><Icons.Loader size={24}/> กำลังบันทึก...</> : 'ยืนยันการจอง'}
                                         </button>
                                         <div className="text-center text-slate-400 text-sm">
                                             ขณะนี้มีคิวรออยู่ <span className="text-indigo-600 font-bold">{waitingQueues.length}</span> คิว
@@ -386,7 +446,8 @@
 
             // --- ADMIN & DISPLAY MODE ---
             return (
-                <div className="min-h-screen bg-slate-50 pb-10">
+                <div className="min-h-screen bg-slate-50">
+                    {/* Navbar (Only in Admin) */}
                     {viewMode === 'admin' && (
                         <div className="bg-white border-b border-slate-200 sticky top-0 z-50 px-4 py-3 shadow-sm">
                             <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
@@ -405,10 +466,17 @@
                         </div>
                     )}
 
-                    <main className="max-w-7xl mx-auto p-4 md:p-6">
-                        {viewMode === 'display' && (
-                            <div className="flex flex-col lg:flex-row gap-6 h-[85vh]">
+                    {viewMode === 'display' ? (
+                        <div className="min-h-screen flex items-center justify-center p-8 bg-slate-100">
+                            {/* Display Mode - Centered & Wider Layout */}
+                            <div className="flex flex-col lg:flex-row gap-8 w-full max-w-[90vw] h-[85vh]">
+                                {/* Left: Current Queue */}
                                 <div className="flex-1 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl shadow-2xl flex flex-col items-center justify-center text-white relative overflow-hidden p-8">
+                                    {!audioEnabled && (
+                                        <button onClick={enableAudio} className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full text-sm backdrop-blur-md flex items-center gap-2 transition-all z-50">
+                                            <Icons.Volume size={16}/> เปิดเสียงเรียก
+                                        </button>
+                                    )}
                                     <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
                                     <h2 className="text-2xl font-medium opacity-80 mb-8 uppercase tracking-widest">Calling Queue</h2>
                                     {currentServing ? (
@@ -430,19 +498,22 @@
                                         </div>
                                     )}
                                 </div>
-                                <div className="w-full lg:w-96 bg-white rounded-3xl shadow-xl border border-slate-100 flex flex-col overflow-hidden">
+                                {/* Right: Waiting List (Wider) */}
+                                <div className="w-full lg:w-[30rem] bg-white rounded-3xl shadow-xl border border-slate-100 flex flex-col overflow-hidden">
                                     <div className="p-6 bg-slate-50 border-b border-slate-100 font-bold text-slate-600 flex items-center gap-2">
                                         <Icons.Clock size={20} className="text-indigo-500"/> Next Queue
                                     </div>
-                                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                                    <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
                                         {waitingQueues.slice(0, 8).map((q) => (
                                             <div key={q.id} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl shadow-sm">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center font-bold text-slate-600 text-lg">
+                                                <div className="flex items-center gap-4 w-full">
+                                                    <div className="w-14 h-14 bg-slate-100 rounded-lg flex-shrink-0 flex items-center justify-center font-bold text-xl text-slate-600">
                                                         {q.number}
                                                     </div>
-                                                    <div>
-                                                        <div className="font-bold text-slate-800">{q.name}</div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="font-bold text-slate-800 text-lg whitespace-nowrap overflow-hidden text-ellipsis">
+                                                            คุณ {q.name}
+                                                        </div>
                                                         <div className="text-xs text-slate-400">Waiting</div>
                                                     </div>
                                                 </div>
@@ -454,9 +525,10 @@
                                     </div>
                                 </div>
                             </div>
-                        )}
-
-                        {viewMode === 'admin' && (
+                        </div>
+                    ) : (
+                        // Admin Mode Layout
+                        <main className="max-w-7xl mx-auto p-4 md:p-6">
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                 <div className="lg:col-span-2 space-y-6">
                                     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
@@ -547,8 +619,8 @@
                                     </div>
                                 </div>
                             </div>
-                        )}
-                    </main>
+                        </main>
+                    )}
                 </div>
             );
         }

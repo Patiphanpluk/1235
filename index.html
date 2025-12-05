@@ -101,17 +101,17 @@
             History: (p) => <Icon d="M3 3v5h5 M3.05 13A9 9 0 1 0 6 5.3L3 8" {...p} />
         };
 
-        // --- Sound Helper: Play Beep Sound ---
+        // --- Sound Helper: Play Beep Sound (Fixed with cleanup) ---
         const playNotificationSound = () => {
-            // เพิ่มการสั่น (Vibrate) สำหรับ Android
+            // สั่น (Android Only, iOS web doesn't support vibrate)
             if ("vibrate" in navigator) {
-                // สั่น 200ms, หยุด 100ms, สั่น 200ms
-                navigator.vibrate([200, 100, 200]);
+                try { navigator.vibrate([200, 100, 200]); } catch(e){}
             }
 
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             if (!AudioContext) return;
             
+            // Create context
             const ctx = new AudioContext();
             
             const beep = (startTime, freq) => {
@@ -133,9 +133,14 @@
             beep(now, 800);
             beep(now + 0.15, 800);
             beep(now + 0.3, 800);
+
+            // Important: Close context after sound finishes to free up resources
+            setTimeout(() => {
+                if(ctx.state !== 'closed') ctx.close();
+            }, 1000);
         };
 
-        // --- TTS Helper (Improved Thai with Name) ---
+        // --- TTS Helper ---
         const announceQueue = (queueNumber, customerName) => {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
@@ -280,6 +285,7 @@
                 const myQ = queues.find(q => q.id === myQueueId);
                 
                 if (myQ && myQ.status === 'serving') {
+                    // Check timestamp to handle RECALL
                     const lastPlayed = lastAnnouncedMyQueueRef.current;
                     const isNewCall = !lastPlayed || lastPlayed.id !== myQ.id || lastPlayed.calledAt !== myQ.calledAt;
 
@@ -330,6 +336,22 @@
                 if (!customerName.trim() || !services || !user) return;
                 setIsSubmitting(true);
                 try { if ('Notification' in window) Notification.requestPermission(); } catch (e) {}
+
+                // Unlock Audio for Mobile (Important!)
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    try {
+                        const ctx = new AudioContext();
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        gain.gain.value = 0; // Silent
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(0);
+                        osc.stop(0.1);
+                        setTimeout(() => ctx.close(), 200);
+                    } catch(e) { console.log("Audio unlock failed", e); }
+                }
 
                 const prefixQueues = queues.filter(q => q.number.startsWith(queuePrefix));
                 const maxNum = prefixQueues.reduce((max, q) => {

@@ -19,11 +19,11 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Sarabun', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .animate-fade-in { animation: fade-in 0.4s ease-out forwards; }
+        .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
         .animate-bounce-slow { animation: bounce 2s infinite; }
-        .animate-slide-up { animation: slide-up 0.3s ease-out forwards; }
+        .animate-pop-in { animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pop-in { from { opacity: 0; transform: scale(0.9) translate(-50%, -50%); } to { opacity: 1; transform: scale(1) translate(-50%, -50%); } }
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -150,7 +150,7 @@
                     spokenText += " เข้ารับบริการ"; 
                 } else {
                     spokenText = "หมายเลข " + numberText;
-                    spokenText += " ถึงคิวของคุณแล้ว";
+                    spokenText += " ถึงคิวแล้ว";
                 }
                 const utterance = new SpeechSynthesisUtterance(spokenText);
                 utterance.lang = 'th-TH'; utterance.rate = 0.85; utterance.volume = 1;
@@ -209,14 +209,16 @@
             );
         };
 
-        // --- Generic Toast Component ---
+        // --- Beautiful Centered Toast Component ---
         const Toast = ({ message, type, show }) => {
             if (!show) return null;
             return (
-                <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[100] animate-slide-up">
-                    <div className={`px-6 py-3 rounded-full shadow-lg font-bold text-white flex items-center gap-2 ${type === 'error' ? 'bg-red-500' : 'bg-green-600'}`}>
-                        {type === 'error' ? <Icons.Alert size={20}/> : <Icons.Check size={20}/>}
-                        {message}
+                <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[100] animate-pop-in">
+                    <div className={`px-8 py-5 rounded-2xl shadow-2xl font-bold text-white text-xl flex flex-col items-center gap-3 min-w-[240px] text-center backdrop-blur-md border border-white/20 ${type === 'error' ? 'bg-slate-800/90 text-red-400' : 'bg-slate-800/90 text-green-400'}`}>
+                        <div className={`p-4 rounded-full ${type === 'error' ? 'bg-red-500/20' : 'bg-green-500/20'} mb-1`}>
+                            {type === 'error' ? <Icons.Alert size={40}/> : <Icons.Check size={40}/>}
+                        </div>
+                        <span className="text-white">{message}</span>
                     </div>
                 </div>
             );
@@ -266,7 +268,7 @@
             // Show Toast Helper
             const showToastFn = (message, type = 'success') => {
                 setToast({ show: true, message, type });
-                setTimeout(() => setToast(prev => ({ ...prev, show: false })), 2500);
+                setTimeout(() => setToast(prev => ({ ...prev, show: false })), 2000);
             };
 
             useEffect(() => {
@@ -627,9 +629,6 @@
                                                     </div>
                                                 </div>
                                                 <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
-                                                    <button onClick={() => handleSkip(q)} disabled={!!currentServing} className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-4 py-2 rounded-lg font-bold text-sm shadow-sm bg-amber-100 text-amber-700 hover:bg-amber-200`}>
-                                                        <Icons.Skip size={16}/> ข้าม
-                                                    </button>
                                                     <button onClick={() => updateStatus(q.id, 'serving')} disabled={!!currentServing} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-lg font-bold text-sm shadow-sm ${currentServing ? 'bg-slate-100 text-slate-400' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95'}`}>
                                                         <Icons.Bell size={18}/> เรียกคิว
                                                     </button>

@@ -96,7 +96,8 @@
             ),
             Trash: (p) => <Icon d="M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" {...p} />,
             History: (p) => <Icon d="M3 3v5h5 M3.05 13A9 9 0 1 0 6 5.3L3 8" {...p} />,
-            Skip: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||24} height={p.size||24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={p.className}><path d="m13 19 6-6-6-6"/><path d="M5 12h14"/></svg>
+            Skip: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||24} height={p.size||24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={p.className}><path d="m13 19 6-6-6-6"/><path d="M5 12h14"/></svg>,
+            Edit: (p) => <Icon d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" {...p} />
         };
 
         // --- Sound Helper: Play Beep Sound (ติ๊ด-ติ๊ด) ---
@@ -527,6 +528,30 @@
                 } catch (err) { console.error(err); }
             };
 
+            const handleDeleteQueue = async (id) => {
+                if (!confirm("ต้องการลบรายการนี้ใช่หรือไม่?")) return;
+                if (!user) return;
+                try {
+                    let docRef = (typeof __app_id !== 'undefined')
+                        ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('queues').doc(id)
+                        : services.db.collection('queues').doc(id);
+                    await docRef.delete();
+                } catch (err) { alert("ลบไม่สำเร็จ: " + err.message); }
+            };
+
+            const handleEditQueue = async (queue) => {
+                const newName = prompt("แก้ไขชื่อ:", queue.name);
+                if (newName && newName.trim() !== "") {
+                    if (!user) return;
+                    try {
+                        let docRef = (typeof __app_id !== 'undefined')
+                            ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('queues').doc(queue.id)
+                            : services.db.collection('queues').doc(queue.id);
+                        await docRef.update({ name: newName.trim() });
+                    } catch (err) { alert("แก้ไขไม่สำเร็จ: " + err.message); }
+                }
+            };
+
             const handleClearQueues = async () => {
                 if (!confirm("คุณแน่ใจหรือไม่ที่จะลบข้อมูลคิวทั้งหมด? (ไม่สามารถกู้คืนได้)")) return;
                 if (!user) return;
@@ -568,7 +593,16 @@
             const waitingQueues = queues.filter(q => q.status === 'waiting');
             const currentServing = queues.find(q => q.status === 'serving');
             const myQueue = queues.find(q => q.id === myQueueId);
-            const historyList = showHistory ? queues.filter(q => q.status === showHistory) : [];
+            
+            // Logic for History List (Filter & Sort)
+            let historyList = [];
+            if (showHistory === 'all') {
+                // Show all, sorted by newest first
+                historyList = [...queues].sort((a, b) => b.createdAt - a.createdAt);
+            } else if (showHistory) {
+                // Filter by status, sorted by newest first
+                historyList = queues.filter(q => q.status === showHistory).sort((a, b) => b.createdAt - a.createdAt);
+            }
 
             if (configError) return <SetupError errorMsg={errorMsg} />;
             if (loading) return <div className="h-screen flex items-center justify-center text-slate-400">กำลังเชื่อมต่อระบบ...</div>;
@@ -715,17 +749,17 @@
                                     
                                     {currentServing ? (
                                         <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-indigo-50 rounded-xl p-6 border border-indigo-100">
-                                            <div className="text-center md:text-left">
+                                            <div className="text-center md:text-left flex-shrink-0">
                                                 <div className="text-xs font-bold text-indigo-400 uppercase">Serving Now</div>
-                                                <div className="text-5xl font-black text-slate-800 mt-1 mb-2">{currentServing.number}</div>
-                                                <div className="text-xl font-medium text-slate-600">คุณ {currentServing.name}</div>
+                                                <div className="text-5xl font-black text-slate-800 mt-1 mb-2 whitespace-nowrap">{currentServing.number}</div>
+                                                <div className="text-xl font-medium text-slate-600 whitespace-nowrap">คุณ {currentServing.name}</div>
                                             </div>
                                             <div className="flex flex-col gap-3 w-full md:min-w-[400px]">
                                                 {/* Top Row: 3 Buttons */}
-                                                <div className="flex gap-3 w-full">
-                                                    <button onClick={() => handleRecall(currentServing.id)} className="flex-1 flex items-center justify-center gap-2 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-4 py-4 rounded-xl font-bold active:scale-95 transition-all whitespace-nowrap"><Icons.Volume size={20}/> เรียกซ้ำ</button>
-                                                    <button onClick={(e) => { e.preventDefault(); openSkipPopup(currentServing); }} className="flex-1 flex items-center justify-center gap-2 bg-amber-100 text-amber-700 hover:bg-amber-200 px-4 py-4 rounded-xl font-bold active:scale-95 transition-all whitespace-nowrap"><Icons.Skip size={20}/> ข้าม</button>
-                                                    <button onClick={() => updateStatus(currentServing.id, 'cancelled')} className="flex-1 flex items-center justify-center gap-2 bg-white border border-red-200 text-red-500 hover:bg-red-50 px-4 py-4 rounded-xl font-bold active:scale-95 transition-all whitespace-nowrap"><Icons.Cross/> ยกเลิก</button>
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
+                                                    <button onClick={() => handleRecall(currentServing.id)} className="flex items-center justify-center gap-2 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-4 py-4 rounded-xl font-bold active:scale-95 transition-all whitespace-nowrap"><Icons.Volume size={20}/> เรียกซ้ำ</button>
+                                                    <button onClick={(e) => { e.preventDefault(); openSkipPopup(currentServing); }} className="flex items-center justify-center gap-2 bg-amber-100 text-amber-700 hover:bg-amber-200 px-4 py-4 rounded-xl font-bold active:scale-95 transition-all whitespace-nowrap"><Icons.Skip size={20}/> ข้าม</button>
+                                                    <button onClick={() => updateStatus(currentServing.id, 'cancelled')} className="flex items-center justify-center gap-2 bg-white border border-red-200 text-red-500 hover:bg-red-50 px-4 py-4 rounded-xl font-bold active:scale-95 transition-all whitespace-nowrap"><Icons.Cross/> ยกเลิก</button>
                                                 </div>
                                                 {/* Bottom Row: 1 Big Button */}
                                                 <button onClick={() => updateStatus(currentServing.id, 'completed')} className="w-full flex items-center justify-center gap-2 bg-green-500 text-white px-6 py-4 rounded-xl font-bold shadow-lg shadow-green-200 hover:bg-green-600 active:scale-95 transition-all text-xl"><Icons.Check/> เสร็จสิ้น</button>
@@ -751,9 +785,14 @@
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <button onClick={() => updateStatus(q.id, 'serving')} disabled={!!currentServing} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-lg font-bold text-sm shadow-sm ${currentServing ? 'bg-slate-100 text-slate-400' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95'}`}>
-                                                    <Icons.Bell size={18}/> เรียกคิว
-                                                </button>
+                                                <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                                                    <button onClick={() => handleSkip(q)} disabled={!!currentServing} className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-4 py-2 rounded-lg font-bold text-sm shadow-sm bg-amber-100 text-amber-700 hover:bg-amber-200`}>
+                                                        <Icons.Skip size={16}/> ข้าม
+                                                    </button>
+                                                    <button onClick={() => updateStatus(q.id, 'serving')} disabled={!!currentServing} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-lg font-bold text-sm shadow-sm ${currentServing ? 'bg-slate-100 text-slate-400' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95'}`}>
+                                                        <Icons.Bell size={18}/> เรียกคิว
+                                                    </button>
+                                                </div>
                                             </div>
                                         )) : <div className="p-10 text-center text-slate-400">ไม่มีคิวรอเรียก</div>}
                                     </div>
@@ -764,7 +803,10 @@
                                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sticky top-24">
                                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-4">ภาพรวมวันนี้ (กดเพื่อดูประวัติ)</h3>
                                     <div className="space-y-3">
-                                        <div className="flex justify-between items-center p-4 bg-slate-50 rounded-xl"><span className="text-slate-600 font-medium">ทั้งหมด</span><span className="text-2xl font-black text-slate-800">{queues.length}</span></div>
+                                        <button onClick={() => setShowHistory('all')} className="w-full flex justify-between items-center p-4 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors">
+                                            <span className="text-slate-600 font-medium">ทั้งหมด</span>
+                                            <span className="text-2xl font-black text-slate-800">{queues.length}</span>
+                                        </button>
                                         <button onClick={() => setShowHistory('completed')} className="w-full flex justify-between items-center p-4 bg-green-50 hover:bg-green-100 rounded-xl transition-colors text-green-700"><span className="font-medium flex items-center gap-2"><Icons.History size={16}/> เสร็จสิ้น</span><span className="text-2xl font-black">{queues.filter(q => q.status==='completed').length}</span></button>
                                         <button onClick={() => setShowHistory('cancelled')} className="w-full flex justify-between items-center p-4 bg-red-50 hover:bg-red-100 rounded-xl transition-colors text-red-700"><span className="font-medium flex items-center gap-2"><Icons.History size={16}/> ยกเลิก</span><span className="text-2xl font-black">{queues.filter(q => q.status==='cancelled').length}</span></button>
                                     </div>
@@ -827,17 +869,25 @@
                         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                             <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl animate-fade-in h-[80vh] flex flex-col">
                                 <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                                    <h2 className="font-bold text-xl flex items-center gap-2"><Icons.History/> ประวัติ: {showHistory === 'completed' ? 'เสร็จสิ้น' : 'ยกเลิก'}</h2>
+                                    <h2 className="font-bold text-xl flex items-center gap-2"><Icons.History/> ประวัติ: {showHistory === 'all' ? 'ทั้งหมด' : (showHistory === 'completed' ? 'เสร็จสิ้น' : 'ยกเลิก')}</h2>
                                     <button onClick={() => setShowHistory(null)}><Icons.Cross/></button>
                                 </div>
                                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
                                     {historyList.length > 0 ? historyList.map(q => (
                                         <div key={q.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-xl">
                                             <div>
-                                                <div className="font-bold text-slate-700">{q.number} - {q.name}</div>
-                                                <div className="text-xs text-slate-400">{q.timestamp}</div>
+                                                <div className="font-bold text-slate-700 flex items-center gap-2">
+                                                    {q.number} - {q.name}
+                                                    <button onClick={() => handleEditQueue(q)} className="text-slate-400 hover:text-indigo-600"><Icons.Edit size={16}/></button>
+                                                </div>
+                                                <div className="text-xs text-slate-400">
+                                                    {q.timestamp} • <span className={`uppercase font-bold ${q.status==='completed'?'text-green-500':(q.status==='cancelled'?'text-red-500':'text-amber-500')}`}>{q.status}</span>
+                                                </div>
                                             </div>
-                                            <button onClick={() => handleRecall(q.id)} className="text-sm bg-white border border-slate-200 px-3 py-1 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 shadow-sm">เรียกซ้ำ</button>
+                                            <div className="flex gap-2">
+                                                <button onClick={() => handleRecall(q.id)} className="text-sm bg-white border border-slate-200 px-3 py-1 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 shadow-sm">เรียกซ้ำ</button>
+                                                <button onClick={() => handleDeleteQueue(q.id)} className="text-sm bg-white border border-red-200 text-red-400 px-2 py-1 rounded-lg hover:bg-red-50 hover:text-red-600 shadow-sm"><Icons.Trash size={16}/></button>
+                                            </div>
                                         </div>
                                     )) : <div className="text-center text-slate-400 mt-10">ไม่มีข้อมูล</div>}
                                 </div>

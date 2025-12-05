@@ -505,9 +505,15 @@
                 if (!user) return;
                 try {
                     const batch = services.db.batch();
+                    // 1. Clear Queues
                     let collectionRef = (typeof __app_id !== 'undefined') ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('queues') : services.db.collection('queues');
                     const snapshot = await collectionRef.get();
                     snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+
+                    // 2. Clear Saved Notes in Settings
+                    let settingsRef = (typeof __app_id !== 'undefined') ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('settings').doc('main') : services.db.collection('settings').doc('main');
+                    batch.set(settingsRef, { savedNotes: [] }, { merge: true });
+
                     await batch.commit();
                     setShowClearPopup(false);
                     showToastFn("ล้างข้อมูลเรียบร้อยแล้ว", 'success');
@@ -648,17 +654,20 @@
             return (
                 <div className="min-h-screen bg-slate-50 pb-10">
                     <Toast message={toast.message} type={toast.type} show={toast.show} />
-                    <div className="bg-white border-b border-slate-200 sticky top-0 z-50 px-4 py-3 shadow-sm">
-                        <div className="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
-                            <div className="flex items-center gap-2 font-bold text-xl text-indigo-900"><div className="bg-indigo-600 text-white w-8 h-8 rounded flex items-center justify-center">Q</div><span className="hidden sm:inline">Q-Master Admin</span></div>
-                            <div className="flex gap-2 bg-slate-100 p-1 rounded-lg">
-                                <button onClick={() => setViewMode('admin')} className={`px-4 py-1.5 rounded-md text-sm font-bold ${viewMode==='admin'?'bg-white shadow text-indigo-600':'text-slate-500'}`}>Admin</button>
-                                <button onClick={() => setViewMode('display')} className={`px-4 py-1.5 rounded-md text-sm font-bold ${viewMode==='display'?'bg-white shadow text-indigo-600':'text-slate-500'}`}>Display</button>
+                    <div className="bg-white border-b border-slate-200 sticky top-0 z-50 px-2 py-2 sm:px-4 sm:py-3 shadow-sm">
+                        <div className="max-w-7xl mx-auto flex justify-between items-center gap-2">
+                            <div className="flex items-center gap-2 font-bold text-xl text-indigo-900 flex-shrink-0">
+                                <div className="bg-indigo-600 text-white w-8 h-8 rounded flex items-center justify-center">Q</div>
+                                <span className="hidden md:inline">Q-Master Admin</span>
                             </div>
-                            <div className="flex gap-2">
-                                <button onClick={() => setShowScanner(true)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full flex-shrink-0 transition-colors"><Icons.Scan size={24}/></button>
-                                <button onClick={() => setShowSettings(true)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-full flex-shrink-0"><Icons.Settings/></button>
-                                <button onClick={openKioskLink} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md"><Icons.Link size={16}/> <span className="hidden sm:inline">Kiosk Link</span></button>
+                            <div className="flex gap-1 bg-slate-100 p-1 rounded-lg flex-shrink-0">
+                                <button onClick={() => setViewMode('admin')} className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-bold ${viewMode==='admin'?'bg-white shadow text-indigo-600':'text-slate-500'}`}>Admin</button>
+                                <button onClick={() => setViewMode('display')} className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-bold ${viewMode==='display'?'bg-white shadow text-indigo-600':'text-slate-500'}`}>Display</button>
+                            </div>
+                            <div className="flex gap-1 sm:gap-2 flex-shrink-0">
+                                <button onClick={() => setShowScanner(true)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full flex-shrink-0 transition-colors"><Icons.Scan size={20} className="sm:w-6 sm:h-6"/></button>
+                                <button onClick={() => setShowSettings(true)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-full flex-shrink-0"><Icons.Settings size={20} className="sm:w-6 sm:h-6"/></button>
+                                <button onClick={openKioskLink} className="flex items-center gap-2 bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm font-bold shadow-md"><Icons.Link size={16}/> <span className="hidden sm:inline">Kiosk Link</span></button>
                             </div>
                         </div>
                     </div>

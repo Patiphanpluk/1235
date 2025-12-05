@@ -333,17 +333,7 @@
                     const isNewCall = !lastPlayed || lastPlayed.id !== myQ.id || lastPlayed.calledAt !== myQ.calledAt;
 
                     if (isNewCall) {
-                        // 1. Notification (เด้งแจ้งเตือนแม้พับจอ - แต่ต้องขอสิทธิ์ก่อน)
-                        try {
-                            if ('Notification' in window && Notification.permission === 'granted') {
-                                 // ต้องใส่ requireInteraction เพื่อให้มันค้างหน้าจอ
-                                 new Notification("ถึงคิวของคุณแล้ว!", { 
-                                     body: `หมายเลข ${myQ.number} เชิญเข้ารับบริการ`, 
-                                     icon: '',
-                                     requireInteraction: true 
-                                });
-                            }
-                        } catch (e) {}
+                        // REMOVED NOTIFICATION LOGIC HERE
                         
                         // 2. เสียงเตือนสำหรับลูกค้า
                         // เล่นเสียงติ๊ดๆ ก่อน
@@ -401,8 +391,7 @@
                 if (!customerName.trim() || !services || !user) return;
                 setIsSubmitting(true);
                 
-                // ขอ Permission Notification ทันทีที่จองคิว
-                try { if ('Notification' in window) Notification.requestPermission(); } catch (e) {}
+                // REMOVED Notification.requestPermission()
 
                 // เรียกใช้ Wake Lock เพื่อไม่ให้หน้าจอดับ (สำคัญมากสำหรับ iOS/Android เพื่อให้เสียงดังได้ตลอด)
                 await requestWakeLock();

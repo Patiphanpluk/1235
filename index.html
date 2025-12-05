@@ -103,6 +103,12 @@
 
         // --- Sound Helper: Play Beep Sound ---
         const playNotificationSound = () => {
+            // เพิ่มการสั่น (Vibrate) สำหรับ Android
+            if ("vibrate" in navigator) {
+                // สั่น 200ms, หยุด 100ms, สั่น 200ms
+                navigator.vibrate([200, 100, 200]);
+            }
+
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             if (!AudioContext) return;
             

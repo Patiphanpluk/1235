@@ -369,7 +369,7 @@
             // --- Handle Audio Enable ---
             const handleEnableAudio = () => {
                 initGlobalAudio();
-                const silentAudio = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTSVAAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////wAAAAD/84QAAAAAExAAAAAAAAABAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA";
+                const silentAudio = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTSVAAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////wAAAAD/84QAAAAAExAAAAAAAAABAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA";
                 const audio = new Audio(silentAudio);
                 
                 audio.play().then(() => { 
@@ -1326,100 +1326,103 @@
                     )}
 
                     {showSettings && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto">
-                                <h2 className="font-bold text-xl mb-4">ตั้งค่าระบบ</h2>
+                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                            <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto ring-1 ring-black/5">
+                                <h2 className="font-bold text-xl mb-6 text-slate-800 border-b border-slate-100 pb-4">ตั้งค่าระบบ</h2>
                                 
-                                <div className="space-y-4">
+                                <div className="space-y-6">
                                     {/* Service Toggle */}
-                                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                                        <div className="flex items-center gap-2">
-                                            <div className={`p-2 rounded-lg ${serviceOpen ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`p-2.5 rounded-xl ${serviceOpen ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
                                                 <Icons.Power size={20} />
                                             </div>
                                             <div className="text-left">
                                                 <div className="text-sm font-bold text-slate-800">สถานะบริการ</div>
-                                                <div className={`text-xs ${serviceOpen ? 'text-green-600' : 'text-red-500'}`}>
+                                                <div className={`text-xs font-medium ${serviceOpen ? 'text-green-600' : 'text-red-500'}`}>
                                                     {serviceOpen ? 'เปิดให้บริการ' : 'ปิดให้บริการ'}
                                                 </div>
                                             </div>
                                         </div>
                                         <button 
                                             onClick={handleServiceToggle} 
-                                            className={`w-14 h-8 rounded-full transition-colors relative ${serviceOpen ? 'bg-green-500' : 'bg-slate-300'}`}
+                                            className={`w-14 h-8 flex items-center rounded-full p-1 transition-all duration-300 ${serviceOpen ? 'bg-green-500 shadow-inner' : 'bg-slate-200 shadow-inner'}`}
                                         >
-                                            <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-sm transition-all transform ${serviceOpen ? 'translate-x-7' : 'translate-x-1'}`}></div>
+                                            <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${serviceOpen ? 'translate-x-6' : 'translate-x-0'}`}></div>
                                         </button>
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-2">ตัวอักษรนำหน้าคิว (Prefix)</label>
-                                        <input type="text" value={queuePrefix || ''} onChange={e => setQueuePrefix(e.target.value.toUpperCase())} className="w-full border border-slate-200 rounded-xl px-4 py-2 text-center text-2xl font-bold uppercase" maxLength={2} />
+                                        <label className="block text-sm font-bold text-slate-700 mb-2 ml-1">ตัวอักษรนำหน้าคิว (Prefix)</label>
+                                        <input type="text" value={queuePrefix || ''} onChange={e => setQueuePrefix(e.target.value.toUpperCase())} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-center text-2xl font-bold uppercase focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-slate-50" maxLength={2} />
                                     </div>
                                     
-                                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                                        <span className="text-sm font-medium text-slate-700 flex items-center gap-2"><Icons.QrCode size={18}/> ระบบ QR Code</span>
+                                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <span className="text-sm font-bold text-slate-700 flex items-center gap-3"><Icons.QrCode size={20} className="text-slate-400"/> ระบบ QR Code</span>
                                         <button 
                                             onClick={() => setQrEnabled(!qrEnabled)} 
-                                            className={`w-12 h-6 rounded-full transition-colors relative ${qrEnabled ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                                            className={`w-14 h-8 flex items-center rounded-full p-1 transition-all duration-300 ${qrEnabled ? 'bg-indigo-600 shadow-inner' : 'bg-slate-200 shadow-inner'}`}
                                         >
-                                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${qrEnabled ? 'left-7' : 'left-1'}`}></div>
+                                            <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${qrEnabled ? 'translate-x-6' : 'translate-x-0'}`}></div>
                                         </button>
                                     </div>
 
                                     {/* History Toggle */}
-                                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                                        <span className="text-sm font-medium text-slate-700 flex items-center gap-2"><Icons.History size={18}/> ประวัติการจองลูกค้า</span>
+                                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <span className="text-sm font-bold text-slate-700 flex items-center gap-3"><Icons.History size={20} className="text-slate-400"/> ประวัติการจองลูกค้า</span>
                                         <button 
                                             onClick={() => setHistoryEnabled(!historyEnabled)} 
-                                            className={`w-12 h-6 rounded-full transition-colors relative ${historyEnabled ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                                            className={`w-14 h-8 flex items-center rounded-full p-1 transition-all duration-300 ${historyEnabled ? 'bg-indigo-600 shadow-inner' : 'bg-slate-200 shadow-inner'}`}
                                         >
-                                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${historyEnabled ? 'left-7' : 'left-1'}`}></div>
+                                            <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${historyEnabled ? 'translate-x-6' : 'translate-x-0'}`}></div>
                                         </button>
                                     </div>
 
                                     {/* External Link Toggle */}
-                                    <div className="bg-slate-50 rounded-xl p-3">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <span className="text-sm font-medium text-slate-700 flex items-center gap-2"><Icons.Folder size={18}/> ระบบลิ้งค์เอกสาร</span>
+                                    <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <span className="text-sm font-bold text-slate-700 flex items-center gap-3"><Icons.Folder size={20} className="text-slate-400"/> ระบบลิ้งค์เอกสาร</span>
                                             <button 
                                                 onClick={() => setExternalLinkEnabled(!externalLinkEnabled)} 
-                                                className={`w-12 h-6 rounded-full transition-colors relative ${externalLinkEnabled ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                                                className={`w-14 h-8 flex items-center rounded-full p-1 transition-all duration-300 ${externalLinkEnabled ? 'bg-indigo-600 shadow-inner' : 'bg-slate-200 shadow-inner'}`}
                                             >
-                                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${externalLinkEnabled ? 'left-7' : 'left-1'}`}></div>
+                                                <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${externalLinkEnabled ? 'translate-x-6' : 'translate-x-0'}`}></div>
                                             </button>
                                         </div>
                                         {externalLinkEnabled && (
-                                            <div className="mt-2 space-y-2">
+                                            <div className="mt-4 space-y-4 border-t border-slate-200 pt-4 animate-fade-in">
                                                 <div>
-                                                    <label className="block text-xs font-medium text-slate-500 mb-1">ลิ้งค์หลัก (เช่น Google Drive Search URL)</label>
+                                                    <label className="block text-xs font-bold text-slate-500 mb-1 ml-1">ลิ้งค์หลัก (เช่น Google Drive URL)</label>
                                                     <input 
                                                         type="text" 
                                                         value={externalLinkBaseUrl || ''} 
                                                         onChange={e => setExternalLinkBaseUrl(e.target.value)} 
-                                                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" 
-                                                        placeholder="https://drive.google.com/drive/u/0/search?q=" 
+                                                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
+                                                        placeholder="https://drive.google.com/..." 
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-xs font-medium text-slate-500 mb-1">ข้อความบนปุ่มลิ้งค์</label>
+                                                    <label className="block text-xs font-bold text-slate-500 mb-1 ml-1">ข้อความบนปุ่มลิ้งค์</label>
                                                     <input 
                                                         type="text" 
                                                         value={externalLinkLabel || ''} 
                                                         onChange={e => setExternalLinkLabel(e.target.value)} 
-                                                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" 
+                                                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
                                                         placeholder="เปิดเอกสาร" 
                                                     />
                                                 </div>
-                                                <p className="text-[10px] text-slate-400">ระบบจะค้นหาโฟลเดอร์ตามเลขคิวให้โดยอัตโนมัติ (เฉพาะ Google Drive)</p>
+                                                <div className="bg-blue-50 p-3 rounded-xl flex gap-2 text-[10px] text-blue-600 border border-blue-100">
+                                                    <div className="flex-shrink-0 mt-0.5">ℹ️</div>
+                                                    <div>ระบบจะค้นหาโฟลเดอร์/ไฟล์ที่มีชื่อตรงกับ "เลขคิว" ใน Google Drive ให้โดยอัตโนมัติ</div>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
                                 </div>
 
-                                <div className="flex gap-2 mt-6">
-                                    <button onClick={() => setShowSettings(false)} className="flex-1 py-2 text-slate-500 hover:bg-slate-100 rounded-xl">ยกเลิก</button>
-                                    <button onClick={handleSaveSettings} className="flex-1 py-2 bg-indigo-600 text-white rounded-xl font-bold">บันทึก</button>
+                                <div className="flex gap-3 mt-8 pt-4 border-t border-slate-100">
+                                    <button onClick={() => setShowSettings(false)} className="flex-1 py-3 text-slate-500 hover:bg-slate-100 rounded-xl font-bold transition-colors">ยกเลิก</button>
+                                    <button onClick={handleSaveSettings} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all transform active:scale-95">บันทึก</button>
                                 </div>
                             </div>
                         </div>

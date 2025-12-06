@@ -305,7 +305,9 @@
             // GAS Integration State
             const [gasWebAppUrl, setGasWebAppUrl] = useState('https://script.google.com/macros/s/AKfycbyHQ4b_69fLsfIV2rh8EMIkE3s3KlZVTz6im2btIAsvVAQJWJ5N6OrjO6sfLtNtSjykaQ/exec'); 
             const [masterLinkC1, setMasterLinkC1] = useState(''); // Link to send to C1
-            const [lastGasSyncTime, setLastGasSyncTime] = useState(null); // NEW: State for last sync time
+            const [masterLinkTitle, setMasterLinkTitle] = useState(''); // NEW: Title for the master link
+            const [lastGasSyncTime, setLastGasSyncTime] = useState(null); 
+            const [lastSentLink, setLastSentLink] = useState(''); // NEW: Track the last successfully sent link
             
             const [externalLinkLabel, setExternalLinkLabel] = useState('เปิดเอกสาร / โฟลเดอร์คิว'); 
             const [useGasForLink, setUseGasForLink] = useState(true); // Always true for simplified UI
@@ -325,7 +327,7 @@
             const [showScannedAction, setShowScannedAction] = useState(null); 
             const [showRecallWait, setShowRecallWait] = useState(false); 
             const [recallCountdown, setRecallCountdown] = useState(0);
-            const [showLinkDataModal, setShowLinkDataModal] = useState(false); // NEW: State for Link Data Modal
+            const [showLinkDataModal, setShowLinkDataModal] = useState(false); 
             
             // Service Close Reason Modal
             const [showCloseReasonModal, setShowCloseReasonModal] = useState(false);
@@ -346,6 +348,10 @@
             const [savedNotes, setSavedNotes] = useState([]);
             
             const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+            
+            // NEW: State for Send Link Status
+            const [isGasSending, setIsGasSending] = useState(false);
+            const [sendSuccess, setSendSuccess] = useState(false);
 
             const skipInputRef = useRef(null);
             const clearInputRef = useRef(null);
@@ -512,15 +518,18 @@
 
 
             // 2. Save Master Link to GAS (Write C1) 
-            const handleSaveToGAS = async (link) => {
+            const handleSaveToGAS = async (link, title) => {
                 if (!gasWebAppUrl) {
                     showToastFn("กรุณาระบุ Google Apps Script URL", "error");
                     return false;
                 }
                 
+                setIsGasSending(true);
+                setSendSuccess(false);
+
                 try {
-                    showToastFn("กำลังส่งลิ้งค์ไปยัง Google Sheet...", "success");
-                    const payload = { link: link, action: 'write' }; // 'action: write' for GAS script to identify writing to C1
+                    // Payload now includes the title to send to the script
+                    const payload = { link: link, title: title, action: 'write' }; 
                     
                     const response = await fetch(gasWebAppUrl, {
                         method: 'POST',
@@ -533,10 +542,11 @@
                     const text = await response.text();
                     
                     if (text.includes("Success")) {
-                        showToastFn("ส่งลิ้งค์ไปยังคอลัมน์ C1 เรียบร้อย", "success");
-                        // Also save the link locally for the current user's setting to see it on load
+                        setSendSuccess(true);
+                        setLastSentLink(link); // Save the link that was successfully sent
+                        // Save the link and title locally
                         let docRef = (typeof __app_id !== 'undefined') ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('settings').doc('main') : services.db.collection('settings').doc('main');
-                        await docRef.set({ masterLinkC1: link }, { merge: true });
+                        await docRef.set({ masterLinkC1: link, masterLinkTitle: title }, { merge: true });
                         return true;
                     } else {
                         showToastFn("ส่งลิ้งค์ไม่สำเร็จ: " + text, "error");
@@ -547,6 +557,10 @@
                     showToastFn("ส่งลิ้งค์ไม่สำเร็จ: " + error.message, "error");
                     console.error("GAS Write Error:", error);
                     return false;
+                } finally {
+                    setIsGasSending(false);
+                    // REMOVED: Reset success state after a short delay to keep the status persistent
+                    // setTimeout(() => setSendSuccess(false), 1500); 
                 }
             };
 
@@ -694,7 +708,16 @@
                         // if (data.useGasForLink !== undefined) setUseGasForLink(data.useGasForLink);
                         if (data.gasWebAppUrl !== undefined) setGasWebAppUrl(data.gasWebAppUrl);
                         if (data.masterLinkC1 !== undefined) setMasterLinkC1(data.masterLinkC1);
-                        if (data.lastGasSyncTime !== undefined) setLastGasSyncTime(data.lastGasSyncTime); // NEW: Load sync time
+                        if (data.masterLinkTitle !== undefined) setMasterLinkTitle(data.masterLinkTitle); // NEW: Load master link title
+                        if (data.lastGasSyncTime !== undefined) setLastGasSyncTime(data.lastGasSyncTime); 
+                        if (data.lastSentLink !== undefined) setLastSentLink(data.lastSentLink); // NEW: Load last sent link
+                        
+                        // Check if the current link matches the last successfully sent link
+                        if (data.masterLinkC1 === data.lastSentLink) {
+                            setSendSuccess(true);
+                        } else {
+                            setSendSuccess(false);
+                        }
                     }
                 }, err => console.log("Settings sync skipped"));
                 return () => { unsubQueues(); unsubSettings(); };
@@ -1016,8 +1039,9 @@
                         externalLinkLabel: externalLinkLabel,
                         useGasForLink: true, // FIX: Always save as true since manual option is removed
                         gasWebAppUrl: gasWebAppUrl,
-                        masterLinkC1: masterLinkC1
-                        // lastGasSyncTime is updated only during sync process
+                        masterLinkC1: masterLinkC1,
+                        masterLinkTitle: masterLinkTitle, // NEW: Save master link title
+                        lastSentLink: lastSentLink // NEW: Save last successful sent link for persistence
                     }, { merge: true });
                     setShowSettings(false);
                     showToastFn("บันทึกการตั้งค่าเรียบร้อย", 'success');
@@ -1251,7 +1275,7 @@
                                             {externalLinkEnabled && selectedHistoryItem.status === 'completed' && (
                                                 <div className="pt-2 mt-2 border-t border-slate-200">
                                                     <button 
-                                                        onClick={() => handleOpenExternalLink(externalLinkMapping, selectedHistoryItem.number)} 
+                                                        onClick={() => handleOpenExternalLink(externalLinkMapping, myQueue.number)} 
                                                         className="w-full py-3 bg-blue-600 border border-blue-700 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-2 font-bold text-sm transition-colors shadow-md animate-bounce-slow"
                                                     >
                                                         <Icons.Folder size={18} /> {externalLinkLabel || 'เปิดเอกสาร / โฟลเดอร์คิว'}
@@ -1628,14 +1652,26 @@
                                         {externalLinkEnabled && (
                                             <div className="mt-4 space-y-4 border-t border-slate-200 pt-4 animate-fade-in">
                                                 
-                                                {/* --- 1. NEW C1 LINK INPUT (MOVED TO TOP) --- */}
+                                                {/* 1. Master Link Title */}
+                                                <div>
+                                                    <label className="block text-xs font-bold text-slate-500 mb-1 ml-1">ชื่อลิ้งค์ / โฟลเดอร์</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={masterLinkTitle || ''} 
+                                                        onChange={e => setMasterLinkTitle(e.target.value)} 
+                                                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500" 
+                                                        placeholder="เช่น โฟลเดอร์คิวลูกค้าวันนี้" 
+                                                    />
+                                                </div>
+
+                                                {/* --- 2. C1 LINK INPUT --- */}
                                                 <div>
                                                     <label className="block text-xs font-bold text-slate-500 mb-1 ml-1">ลิ้งค์</label>
                                                     <div className="flex gap-2">
                                                         <input 
                                                             type="url" 
                                                             value={masterLinkC1 || ''} 
-                                                            onChange={e => setMasterLinkC1(e.target.value)} 
+                                                            onChange={e => {setMasterLinkC1(e.target.value); setSendSuccess(false);}} // Reset success state on change
                                                             className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500" 
                                                             placeholder="เช่น https://drive.google.com/..." 
                                                         />
@@ -1643,18 +1679,24 @@
                                                         {/* Conditional Send Button */}
                                                         {isGoogleDriveLink(masterLinkC1) && (
                                                             <button 
-                                                                onClick={() => handleSaveToGAS(masterLinkC1)}
-                                                                className="flex-shrink-0 bg-green-500 hover:bg-green-600 text-white py-2 px-3 rounded-lg text-xs font-bold transition-colors"
+                                                                onClick={() => handleSaveToGAS(masterLinkC1, masterLinkTitle)}
+                                                                disabled={isGasSending || (sendSuccess && masterLinkC1 === lastSentLink)}
+                                                                className={`flex-shrink-0 py-2 px-3 rounded-lg text-xs font-bold transition-colors w-[100px] flex items-center justify-center gap-1 ${
+                                                                    isGasSending ? 'bg-slate-400 text-white cursor-not-allowed' :
+                                                                    (sendSuccess && masterLinkC1 === lastSentLink) ? 'bg-green-500 text-white cursor-default' :
+                                                                    'bg-green-500 hover:bg-green-600 text-white'
+                                                                }`}
                                                             >
-                                                                ส่งลิ้งค์
+                                                                {isGasSending ? <><Icons.Loader size={12}/> กำลังส่ง...</> : 
+                                                                (sendSuccess && masterLinkC1 === lastSentLink) ? <><Icons.Check size={12}/> ส่งเรียบร้อย</> : 'ส่งลิ้งค์'}
                                                             </button>
                                                         )}
                                                     </div>
                                                     <p className="text-[10px] text-slate-400 mt-1">ลิ้งค์นี้จะถูกส่งไปที่คอลัมน์ C1 ใน Google Sheet (หากระบุ GAS URL)</p>
                                                 </div>
-                                                {/* --- END NEW C1 LINK INPUT --- */}
+                                                {/* --- END C1 LINK INPUT --- */}
                                                 
-                                                {/* 2. GAS Web App URL (Conditional Visibility) */}
+                                                {/* 3. GAS Web App URL (Conditional Visibility) */}
                                                 {isGoogleDriveLink(masterLinkC1) && (
                                                     <div className="animate-fade-in">
                                                         <label className="block text-xs font-bold text-slate-500 mb-1 ml-1 flex items-center gap-1"><Icons.GoogleScript size={12}/> Google Apps Script URL (Web App) (อ่าน/ส่ง)</label>
@@ -1669,7 +1711,7 @@
                                                     </div>
                                                 )}
 
-                                                {/* 3. Link Button Label */}
+                                                {/* 4. Link Button Label */}
                                                 <div>
                                                     <label className="block text-xs font-bold text-slate-500 mb-1 ml-1">ข้อความบนปุ่มลิ้งค์</label>
                                                     <input 
@@ -1681,7 +1723,7 @@
                                                     />
                                                 </div>
 
-                                                {/* 4. Link Test (Keep the test functionality) */}
+                                                {/* 5. Link Test (Keep the test functionality) */}
                                                 <div className="flex gap-2 items-center">
                                                     <input 
                                                         type="text" 

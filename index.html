@@ -265,6 +265,9 @@
             const [queuePrefix, setQueuePrefix] = useState('A'); 
             const [qrEnabled, setQrEnabled] = useState(false); 
             
+            const [showSettings, setShowSettings] = useState(false);
+            const [showHistory, setShowHistory] = useState(null); 
+            
             // Popups & Toast State
             const [showSkipPopup, setShowSkipPopup] = useState(false);
             const [showClearPopup, setShowClearPopup] = useState(false);
@@ -272,7 +275,9 @@
             const [showEditPopup, setShowEditPopup] = useState(null); 
             const [showScanner, setShowScanner] = useState(false); 
             const [showScannedAction, setShowScannedAction] = useState(null); 
-            const [showRecallWait, setShowRecallWait] = useState(false); // New State for Recall Popup
+            
+            // Missing State Variables Added Here
+            const [showRecallWait, setShowRecallWait] = useState(false); 
             const [recallCountdown, setRecallCountdown] = useState(0);
             
             const [skipNote, setSkipNote] = useState('');
@@ -350,9 +355,6 @@
                     }, 1000);
                 } else if (showRecallWait && recallCountdown === 0) {
                     setShowRecallWait(false);
-                    // Recall logic executes after countdown ends? Or execute first then block?
-                    // Usually block first. But here we let it fire first then block subsequent?
-                    // Let's assume: Click -> Fire -> Show Block Popup.
                 }
                 return () => clearInterval(interval);
             }, [showRecallWait, recallCountdown]);

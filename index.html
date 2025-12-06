@@ -51,6 +51,11 @@
         .toggle-checkbox:checked + .toggle-label {
             background-color: #4F46E5;
         }
+        /* Custom class to ensure text wraps and takes full width in display mode */
+        .display-name-full {
+             word-break: break-word;
+             white-space: normal;
+        }
     </style>
 </head>
 <body class="text-slate-900 min-h-screen w-screen">
@@ -107,6 +112,7 @@
             // แก้ไข Icons.Monitor เพื่อให้ใส่ overflow-visible ได้
             Monitor: (p) => <svg xmlns="http://www.w3.org/24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`${p.className} ${p.overflowVisible ? 'overflow-visible' : ''}`}><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>,
             Bell: (p) => <Icon d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9 M10.3 21a1.94 1.94 0 0 0 3.4 0" {...p} />,
+            // FIXED: แก้ไข SyntaxError: Unterminated string constant.
             Check: (p) => <Icon d="M22 11.08V12a10 10 0 1 1-5.93-9.14 M22 4 12 14.01l-3-3" {...p} />,
             Clock: (p) => <Icon d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20 M12 6v6l4 2" {...p} />,
             Users: (p) => <Icon d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75" {...p} />,
@@ -324,7 +330,6 @@
             const [showEditPopup, setShowEditPopup] = useState(null); 
             const [showScanner, setShowScanner] = useState(false); 
             const [showScannedAction, setShowScannedAction] = useState(null); 
-            // FIXED: แก้ไข Syntax Error
             const [showRecallWait, setShowRecallWait] = useState(false); 
             const [recallCountdown, setRecallCountdown] = useState(0);
             const [showLinkDataModal, setShowLinkDataModal] = useState(false); 
@@ -352,6 +357,9 @@
             // NEW: State for Send Link Status
             const [isGasSending, setIsGasSending] = useState(false);
             const [sendSuccess, setSendSuccess] = useState(false);
+            
+            // NEW: State for temporary editing closed reason (Manual Save/Enter key)
+            const [tempEditClosedReason, setTempEditClosedReason] = useState('');
 
             const skipInputRef = useRef(null);
             const clearInputRef = useRef(null);
@@ -694,6 +702,10 @@
             useEffect(() => { if (showClearPopup) { setClearPassword(''); setTimeout(() => clearInputRef.current?.focus({ preventScroll: true }), 50); } }, [showClearPopup]);
             useEffect(() => { if (showEditPopup) { setEditName(showEditPopup.queue.name); setTimeout(() => editInputRef.current?.focus({ preventScroll: true }), 50); } }, [showEditPopup]);
             useEffect(() => { if (showCloseReasonModal && closeReasonInputRef.current) setTimeout(() => closeReasonInputRef.current?.focus({ preventScroll: true }), 50); }, [showCloseReasonModal]);
+            
+            // Set temporary edit reason when settings open or closedReason changes
+            useEffect(() => { setTempEditClosedReason(closedReason); }, [closedReason]);
+
 
             useEffect(() => {
                 if (!services?.db || !user) return; 
@@ -1031,9 +1043,9 @@
                 }
             };
 
-            const handleUpdateClosedReason = async (newReason) => {
+            const handleSaveClosedReason = async (reasonToSave) => {
                  if (!user || !services) return;
-                 const reason = newReason.trim() === '' ? 'ปิดให้บริการชั่วคราว' : newReason.trim();
+                 const reason = reasonToSave.trim() === '' ? 'ปิดให้บริการชั่วคราว' : reasonToSave.trim();
                  setClosedReason(reason);
                  try {
                      let docRef = (typeof __app_id !== 'undefined') ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('settings').doc('main') : services.db.collection('settings').doc('main');
@@ -1419,9 +1431,9 @@
                                         <div className="text-8xl md:text-[10rem] lg:text-[14rem] font-black leading-none tracking-normal drop-shadow-lg text-white">
                                             {currentDisplayServing.number}
                                         </div>
-                                        {/* FIXED: เพิ่มพื้นที่แนวตั้ง (py-8) เพื่อป้องกันชื่อถูกตัด */}
+                                        {/* FIXED: เพิ่มพื้นที่แนวตั้ง (py-8) และใช้ display-name-full */}
                                         <div className="mt-8 bg-white/20 backdrop-blur-md px-12 py-8 rounded-full inline-block w-full max-w-md">
-                                            <span className="text-3xl md:text-5xl font-bold block whitespace-normal break-words">{currentDisplayServing.name}</span>
+                                            <span className="text-3xl md:text-5xl font-bold block display-name-full">{currentDisplayServing.name}</span>
                                         </div>
                                         <div className="mt-10 text-2xl md:text-4xl text-indigo-200 font-bold animate-pulse">เชิญเข้ารับบริการ</div>
                                     </div>
@@ -1758,12 +1770,13 @@
 
                     {showSettings && (
                         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                            <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl animate-fade-in flex flex-col max-h-[90vh] overflow-hidden ring-1 ring-black/5">
-                                <div className="p-6 border-b border-slate-100 bg-white z-10">
+                            {/* FIXED: จำกัดความสูงของ Modal Container */}
+                            <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl animate-fade-in flex flex-col max-h-[90vh] h-[90dvh] overflow-hidden ring-1 ring-black/5">
+                                <div className="p-6 border-b border-slate-100 bg-white z-10 flex-shrink-0">
                                     <h2 className="font-bold text-lg text-slate-800">ตั้งค่าระบบ</h2>
                                 </div>
                                 
-                                <div className="p-6 overflow-y-auto custom-scroll space-y-6 bg-white">
+                                <div className="p-6 overflow-y-auto custom-scroll space-y-6 bg-white flex-1">
                                     {/* Service Toggle */}
                                     <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                                         <div className="flex items-center gap-3">
@@ -1780,17 +1793,22 @@
                                         <ToggleSwitch checked={serviceOpen} onChange={handleServiceToggle} />
                                     </div>
 
-                                    {/* FIXED: เพิ่มช่องแก้ไขเหตุผลเมื่อปิดให้บริการ */}
+                                    {/* FIXED: เพิ่มช่องแก้ไขเหตุผลเมื่อปิดให้บริการ (ใช้ TempEditState) */}
                                     {!serviceOpen && (
-                                        <div className="bg-red-50 rounded-2xl p-4 border border-red-100 animate-fade-in">
+                                        <div className="bg-red-50 rounded-2xl p-4 border border-red-100 animate-fade-in space-y-3">
                                             <label className="block text-xs font-bold text-red-700 mb-2 ml-1">แก้ไขเหตุผลการปิดให้บริการ</label>
                                             <input 
                                                 type="text" 
-                                                value={closedReason} 
-                                                onChange={e => handleUpdateClosedReason(e.target.value)}
+                                                value={tempEditClosedReason} 
+                                                onChange={e => setTempEditClosedReason(e.target.value)} 
+                                                onKeyDown={e => { if (e.key === 'Enter') handleSaveClosedReason(tempEditClosedReason); }}
                                                 className="w-full border border-red-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-red-500" 
                                                 placeholder="เหตุผลการปิดให้บริการ" 
                                             />
+                                            {/* FIXED: เพิ่มปุ่มบันทึกสำหรับเหตุผล */}
+                                            <button onClick={() => handleSaveClosedReason(tempEditClosedReason)} className="w-full bg-red-600 text-white py-2 rounded-lg font-bold hover:bg-red-700 transition-colors text-sm mt-2">
+                                                <Icons.Check size={16} className="inline-block mr-2"/> บันทึกเหตุผล
+                                            </button>
                                         </div>
                                     )}
                                     
@@ -1950,7 +1968,7 @@
                                     </div>
                                 </div>
 
-                                <div className="p-6 border-t border-slate-100 bg-white flex gap-3 z-10">
+                                <div className="p-6 border-t border-slate-100 bg-white flex gap-3 z-10 flex-shrink-0">
                                     <button onClick={() => setShowSettings(false)} className="flex-1 py-3 text-slate-500 hover:bg-slate-100 rounded-xl font-bold transition-colors text-sm">ยกเลิก</button>
                                     <button onClick={handleSaveSettings} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all transform active:scale-95 text-sm">บันทึก</button>
                                 </div>

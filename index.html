@@ -546,7 +546,7 @@
                         setLastSentLink(link); // Save the link that was successfully sent
                         // Save the link and title locally
                         let docRef = (typeof __app_id !== 'undefined') ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('settings').doc('main') : services.db.collection('settings').doc('main');
-                        await docRef.set({ masterLinkC1: link, masterLinkTitle: title }, { merge: true });
+                        await docRef.set({ masterLinkC1: link, masterLinkTitle: title, lastSentLink: link }, { merge: true }); // Save lastSentLink to Firestore
                         return true;
                     } else {
                         showToastFn("ส่งลิ้งค์ไม่สำเร็จ: " + text, "error");
@@ -992,6 +992,7 @@
                     // FIX: Clear customer's booking history (localStorage)
                     // ----------------------------------------------------
                     localStorage.removeItem('my_queue_history');
+                    localStorage.removeItem('my_queue_id'); // NEW: Ensure the current queue ID is also cleared
                     // ----------------------------------------------------
                     
                     setShowClearPopup(false);

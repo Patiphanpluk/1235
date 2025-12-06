@@ -307,7 +307,7 @@
             const [masterLinkC1, setMasterLinkC1] = useState(''); 
             
             const [externalLinkLabel, setExternalLinkLabel] = useState('เปิดเอกสาร / โฟลเดอร์คิว'); 
-            const [useGasForLink, setUseGasForLink] = useState(false); // Changed from useSheet to useGas
+            const [useGasForLink, setUseGasForLink] = useState(false); 
             const [testQueueId, setTestQueueId] = useState(''); 
             
             const [showSettings, setShowSettings] = useState(false);
@@ -423,6 +423,12 @@
                 const url = getLinkForQueue(externalLinkMapping, testQueueId);
                 if (url) {
                     showToastFn(`พบค้นหา: ${url}`, "success");
+                    // Optionally open the link on test
+                    let finalUrl = url;
+                    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                        finalUrl = 'https://' + url;
+                    }
+                    window.open(finalUrl, '_blank');
                 } else {
                     showToastFn(`ไม่พบข้อมูลสำหรับคิว ${testQueueId}`, "error");
                 }
@@ -430,15 +436,16 @@
 
             // --- GAS Integration Functions ---
 
-            // 1. Sync Data from GAS (Read A, B)
-            const handleSyncGAS = async () => {
-                if (!gasWebAppUrl) {
-                    showToastFn("กรุณาระบุ GAS Web App URL", "error");
+            // Core function to fetch and process GAS data (used by both manual and auto sync)
+            const performGasSync = async (isManualSync = false) => {
+                if (!gasWebAppUrl || gasWebAppUrl.trim() === '') {
+                    if (isManualSync) showToastFn("กรุณาระบุ GAS Web App URL", "error");
                     return;
                 }
                 
                 try {
-                    showToastFn("กำลังดึงข้อมูลจาก GAS...", "success");
+                    if (isManualSync) showToastFn("กำลังดึงข้อมูลจาก GAS...", "success");
+
                     // GAS doGet returns JSON: [[A1, B1], [A2, B2], ...]
                     const response = await fetch(gasWebAppUrl);
                     if (!response.ok) throw new Error("ไม่สามารถเชื่อมต่อ GAS ได้");
@@ -449,16 +456,23 @@
                     if (Array.isArray(json)) {
                         const mappingString = json.map(row => {
                              if (Array.isArray(row) && row.length >= 2) {
-                                 return `${row[0]},${row[1]}`;
+                                 // Ensure both key and value are strings and join them with a comma
+                                 return `${String(row[0]).trim()},${String(row[1]).trim()}`;
                              }
                              return null;
                         }).filter(Boolean).join('\n');
 
-                        setExternalLinkMapping(mappingString);
-                        showToastFn("อัปเดตข้อมูลจาก GAS เรียบร้อยแล้ว", "success");
+                        // Update state
+                        setExternalLinkMapping(prev => {
+                            if (prev !== mappingString && isManualSync) {
+                                // Only show success toast if data actually changed during manual sync
+                                showToastFn("อัปเดตข้อมูลจาก GAS เรียบร้อยแล้ว", "success");
+                            }
+                            return mappingString;
+                        });
                         
-                        // Auto save
-                        if (user && services) {
+                        // Only save to Firestore if it's a manual sync (to prevent excessive writes)
+                        if (isManualSync && user && services) {
                             let docRef = (typeof __app_id !== 'undefined') ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('settings').doc('main') : services.db.collection('settings').doc('main');
                             await docRef.set({ externalLinkMapping: mappingString }, { merge: true });
                         }
@@ -467,12 +481,20 @@
                     }
                     
                 } catch (error) {
-                    showToastFn("Error: " + error.message, "error");
-                    console.error(error);
+                    if (isManualSync) {
+                        showToastFn("Error: " + error.message, "error");
+                    } else {
+                        // Suppress console errors for auto-sync unless it's critical
+                        // console.error("Silent GAS Sync Error:", error); 
+                    }
                 }
             };
 
-            // 2. Save Master Link to GAS (Write C1)
+            // 1. Sync Data from GAS (Read A, B) - Manual Button Click (KEPT FOR CONSISTENCY BUT NOT USED IN NEW UI)
+            const handleSyncGAS = () => performGasSync(true);
+
+
+            // 2. Save Master Link to GAS (Write C1) (KEPT FOR CONSISTENCY BUT NOT USED IN NEW UI)
             const handleSaveToGAS = async () => {
                 if (!gasWebAppUrl) {
                     showToastFn("กรุณาระบุ GAS Web App URL", "error");
@@ -659,6 +681,58 @@
                 }, err => console.log("Settings sync skipped"));
                 return () => { unsubQueues(); unsubSettings(); };
             }, [services, user]); 
+
+            // --- Auto-Sync External Link Mapping Interval (5 seconds) ---
+            useEffect(() => {
+                const isGasLinkerActive = externalLinkEnabled && useGasForLink && gasWebAppUrl;
+                if (!services?.db || !user || !isGasLinkerActive) return;
+
+                // Function to perform the sync silently for auto-run
+                const silentSyncGAS = async () => {
+                    if (!gasWebAppUrl || gasWebAppUrl.trim() === '') return;
+                    
+                    try {
+                        const response = await fetch(gasWebAppUrl);
+                        if (!response.ok) throw new Error("GAS connection failed");
+                        
+                        const json = await response.json();
+                        
+                        if (Array.isArray(json)) {
+                            const mappingString = json.map(row => {
+                                 if (Array.isArray(row) && row.length >= 2) {
+                                     // Ensure both key and value are strings and join them with a comma
+                                     return `${String(row[0]).trim()},${String(row[1]).trim()}`;
+                                 }
+                                 return null;
+                            }).filter(Boolean).join('\n');
+
+                            // Only update state if mapping has changed 
+                            setExternalLinkMapping(prev => {
+                                if (prev !== mappingString) {
+                                    // Log silent update, but don't toast
+                                    console.log("GAS mapping silently updated.");
+                                }
+                                return mappingString;
+                            });
+                        } else {
+                            console.warn("GAS data format invalid for silent sync.");
+                        }
+                    } catch (error) {
+                        // Suppress constant console errors during normal operation if GAS is down/slow
+                        // console.error("Silent GAS Sync Error:", error); 
+                    }
+                };
+
+                // Run immediately on load (after settings are loaded)
+                silentSyncGAS(); 
+
+                const intervalId = setInterval(() => {
+                    silentSyncGAS();
+                }, 5000); // 5 seconds interval
+
+                return () => clearInterval(intervalId);
+            }, [services, user, externalLinkEnabled, useGasForLink, gasWebAppUrl]);
+            // --- END Auto-Sync External Link Mapping Interval ---
 
             useEffect(() => {
                 if (!myQueueId || queues.length === 0) return;
@@ -868,6 +942,12 @@
 
                     await batch.commit();
                     setSavedNotes([]); setQueues([]); // Instant UI update
+                    // ----------------------------------------------------
+                    // FIX: Clear customer's booking history (localStorage)
+                    // ----------------------------------------------------
+                    localStorage.removeItem('my_queue_history');
+                    // ----------------------------------------------------
+                    
                     setShowClearPopup(false);
                     showToastFn("ล้างข้อมูลและประวัติเรียบร้อยแล้ว", 'success');
                 } catch (err) { showToastFn("Error clearing: " + err.message, 'error'); }
@@ -1550,34 +1630,20 @@
                                                             />
                                                         </div>
                                                         
-                                                        <div className="bg-white p-3 rounded-xl border border-slate-200">
-                                                             <h4 className="text-xs font-bold text-slate-700 mb-2">1. อ่านลิ้งค์จาก Sheet (A-B)</h4>
-                                                             <button 
-                                                                onClick={handleSyncGAS}
-                                                                className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg text-xs font-bold transition-colors shadow-sm"
-                                                            >
-                                                                <Icons.Sync size={14}/> ดึงข้อมูลคอลัมน์ A, B
-                                                            </button>
+                                                        {/* --- START FIX: Show Auto-Sync Status and remove manual buttons (1. & 2.) --- */}
+                                                        <div className="bg-white p-3 rounded-xl border border-slate-200 text-center space-y-2">
+                                                            <h4 className="text-sm font-bold text-indigo-700 flex items-center justify-center gap-2">
+                                                                <Icons.Sync size={16} className="text-amber-500 animate-spin"/> อ่านลิ้งค์จาก Sheet (A-B)
+                                                            </h4>
+                                                            <p className="text-xs text-slate-600">
+                                                                ระบบจะดึงข้อมูลอัตโนมัติทุก <span className="font-bold text-indigo-600">5 วินาที</span> (ไม่ต้องกดเอง)
+                                                            </p>
+                                                            <div className="text-[10px] text-slate-400 font-mono h-12 overflow-hidden whitespace-pre-wrap border border-slate-100 bg-slate-50 p-1 rounded-md mx-auto max-w-full text-left">
+                                                                {externalLinkMapping.substring(0, 100) || 'รอการดึงข้อมูล...'}
+                                                            </div>
+                                                            <p className="text-[10px] text-slate-400">แสดงผลลัพธ์ที่ดึงมาบางส่วน (คีย์, ลิ้งค์...)</p>
                                                         </div>
-
-                                                        <div className="bg-white p-3 rounded-xl border border-slate-200">
-                                                             <h4 className="text-xs font-bold text-slate-700 mb-2">2. เขียนลิ้งค์ลง Sheet (C1)</h4>
-                                                             <div className="flex gap-2">
-                                                                <input 
-                                                                    type="text" 
-                                                                    value={masterLinkC1 || ''} 
-                                                                    onChange={e => setMasterLinkC1(e.target.value)} 
-                                                                    className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none" 
-                                                                    placeholder="ใส่ลิ้งค์ที่ต้องการบันทึก" 
-                                                                />
-                                                                 <button 
-                                                                    onClick={handleSaveToGAS}
-                                                                    className="px-4 bg-indigo-500 hover:bg-indigo-600 text-white py-2 rounded-lg text-xs font-bold transition-colors shadow-sm whitespace-nowrap"
-                                                                >
-                                                                    บันทึก
-                                                                </button>
-                                                             </div>
-                                                        </div>
+                                                        {/* --- END FIX --- */}
 
                                                     </div>
                                                 ) : (
@@ -1676,7 +1742,7 @@
                         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]">
                             <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-fade-in border-t-4 border-red-500">
                                 <h2 className="font-bold text-xl mb-4 text-red-600 flex items-center gap-2"><Icons.Trash size={24}/> ยืนยันการล้างคิว</h2>
-                                <p className="text-sm text-slate-600 mb-4">การกระทำนี้ไม่สามารถกู้คืนได้ กรุณาใส่รหัสผ่านเพื่อยืนยัน</p>
+                                <p className="text-sm text-slate-600 mb-4">การกระทำนี้ไม่สามารถกู้คืนได้ **ประวัติการจองของลูกค้าบน Kiosk จะถูกล้าง** กรุณาใส่รหัสผ่านเพื่อยืนยัน</p>
                                 <label className="block text-sm font-medium text-slate-700 mb-2">รหัสผ่าน Admin</label>
                                 <input 
                                     ref={clearInputRef}

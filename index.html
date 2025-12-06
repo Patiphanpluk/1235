@@ -338,7 +338,7 @@
             // --- Handle Audio Enable ---
             const handleEnableAudio = () => {
                 initGlobalAudio();
-                const silentAudio = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTSVAAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////wAAAAD/84QAAAAAExAAAAAAAAABAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA";
+                const silentAudio = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTSVAAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////wAAAAD/84QAAAAAExAAAAAAAAABAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA";
                 const audio = new Audio(silentAudio);
                 
                 audio.play().then(() => { 
@@ -676,6 +676,36 @@
                 } catch (err) { showToastFn("Error clearing: " + err.message, 'error'); }
             };
 
+            // Toggle Logic
+            const handleServiceToggle = (e) => {
+                const newState = !serviceOpen;
+                if (newState === false) {
+                    // If turning OFF, show popup for reason
+                    setTempClosedReason('');
+                    setShowCloseReasonModal(true);
+                } else {
+                    // If turning ON, save immediately
+                    saveServiceStatus(true, '');
+                }
+            };
+
+            const confirmCloseService = () => {
+                const reason = tempClosedReason.trim() === "" ? "ปิดให้บริการชั่วคราว" : tempClosedReason.trim();
+                saveServiceStatus(false, reason);
+                setShowCloseReasonModal(false);
+            };
+
+            const saveServiceStatus = async (status, reason) => {
+                if (!user || !services) return;
+                try {
+                    let docRef = (typeof __app_id !== 'undefined') ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('settings').doc('main') : services.db.collection('settings').doc('main');
+                    await docRef.set({ serviceOpen: status, closedReason: reason }, { merge: true });
+                    setServiceOpen(status);
+                    if(!status) setClosedReason(reason);
+                    showToastFn(status ? "เปิดให้บริการแล้ว" : "ปิดให้บริการแล้ว", 'success');
+                } catch (err) { showToastFn("บันทึกไม่สำเร็จ: " + err.message, 'error'); }
+            };
+
             const handleSaveSettings = async () => {
                 if (!user || !services) return;
                 try {
@@ -949,7 +979,7 @@
                     {/* Recall Wait Popup (Single Recall) */}
                     {showRecallWait && (
                         <div className="fixed inset-0 z-[90] bg-black/70 flex items-center justify-center p-4">
-                            <div className="bg-white rounded-3xl p-8 text-center max-w-sm w-full animate-bounce-slow shadow-2xl">
+                            <div className="bg-white rounded-2xl p-8 text-center max-w-sm w-full animate-bounce-slow shadow-2xl">
                                 <div className="text-6xl font-black text-indigo-600 mb-4">{recallCountdown}</div>
                                 <h2 className="text-xl font-bold text-slate-800">กรุณารอสักครู่...</h2>
                                 <p className="text-slate-500 text-sm mt-2">ระบบกำลังเรียกคิว เพื่อป้องกันเสียงซ้อนกัน</p>
@@ -1145,7 +1175,8 @@
                                     <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
                                         <div className="flex items-center gap-2">
                                             <div className={`p-2 rounded-lg ${serviceOpen ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                                                <Icons.Power size={20} />
+                                                {/* Use inline SVG for robustness */}
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0" /><line x1="12" y1="2" x2="12" y2="12" /></svg>
                                             </div>
                                             <div className="text-left">
                                                 <div className="text-sm font-bold text-slate-800">สถานะบริการ</div>

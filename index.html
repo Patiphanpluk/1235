@@ -51,14 +51,6 @@
         .toggle-checkbox:checked + .toggle-label {
             background-color: #4F46E5;
         }
-        /* Custom class to ensure text wraps and takes full width in display mode */
-        /* display-name-full: OLD class, use 'display-name-nowrap' below instead for serving queue */
-        /*
-        .display-name-full {
-             word-break: break-word;
-             white-space: normal;
-        }
-        */
         /* Custom class for current serving name: Ensure single line (no-wrap) */
         .display-name-nowrap {
             white-space: nowrap;
@@ -794,7 +786,6 @@
                         if (data.gasWebAppUrl !== undefined) setGasWebAppUrl(data.gasWebAppUrl);
                         if (data.masterLinkC1 !== undefined) setMasterLinkC1(data.masterLinkC1);
                         if (data.masterLinkTitle !== undefined) setMasterLinkTitle(data.masterLinkTitle); // NEW: Load master link title
-                        if (data.lastGasSyncTime !== undefined) setLastGasSyncTime(data.lastGasSyncTime); 
                         if (data.lastSentLink !== undefined) setLastSentLink(data.lastSentLink); // NEW: Load last sent link
                         
                         // Check if the current link matches the last successfully sent link
@@ -1558,7 +1549,7 @@
                                                 <span className="font-bold text-slate-700 truncate max-w-[150px]">{selectedHistoryItem.name || '-'}</span>
                                             </div>
 
-                                            {/* NEW: External Link Button (Only when Completed) - **FIXED** to use selectedHistoryItem.number */}
+                                            {/* NEW: External Link Button (Only when Completed) */}
                                             {externalLinkEnabled && selectedHistoryItem.status === 'completed' && (
                                                 <div className="pt-2 mt-2 border-t border-slate-200">
                                                     <button 
@@ -1619,7 +1610,8 @@
                 if (isSystemClosed && !serviceOpen) {
                     return (
                         <div className="h-screen w-screen bg-slate-900 text-white p-8 flex flex-col items-center justify-center overflow-hidden">
-                            <div className="text-center w-full max-w-4xl">
+                            {/* FIXED 1: ปรับ div หลักให้เป็น flex และจัดเนื้อหาให้อยู่กึ่งกลาง (justify-center) */}
+                            <div className="text-center w-full max-w-4xl flex flex-col items-center justify-center h-full"> 
                                 <div className="text-5xl font-black mb-8 text-red-500 flex items-center justify-center gap-4">
                                     <Icons.Power size={60} className="text-red-500 animate-pulse"/>
                                     ระบบปิดให้บริการชั่วคราว
@@ -1627,11 +1619,10 @@
                                 <div className="text-[12rem] md:text-[18rem] font-black leading-none tracking-tight text-red-700/50 mb-10">
                                     CLOSED
                                 </div>
-                                <div className="bg-white/10 backdrop-blur-sm px-12 py-8 rounded-3xl inline-block w-full max-w-xl shadow-2xl">
-                                    <span className="text-4xl md:text-6xl font-bold block text-white">
-                                        {closedReason || 'ปิดให้บริการเพื่อปรับปรุงระบบ'}
-                                    </span>
-                                </div>
+                                {/* FIXED 2: ใช้ mx-auto เพื่อจัด span ให้อยู่กึ่งกลาง แต่ไม่ต้องเพิ่ม div หุ้ม */}
+                                <span className="text-4xl md:text-5xl font-bold block text-white mx-auto">
+                                    {closedReason || 'ปิดให้บริการเพื่อปรับปรุงระบบ'}
+                                </span>
                                 <div className="mt-8 text-2xl md:text-3xl text-red-300 font-bold">
                                     กรุณาติดต่อช่องบริการในภายหลัง
                                 </div>
@@ -1681,7 +1672,8 @@
                                         <div className="text-7xl md:text-[8rem] lg:text-[12rem] font-black leading-none tracking-normal drop-shadow-lg text-white">
                                             {currentDisplayServing.number}
                                         </div>
-                                        <div className="mt-8 bg-white/20 backdrop-blur-md px-12 py-6 rounded-full inline-block w-full max-w-2xl">
+                                        {/* แก้ไข 2: ปรับ div ให้มีความกว้างตามเนื้อหา (inline-block) และใช้ py-2 */}
+                                        <div className="mt-8 bg-white/20 backdrop-blur-md px-12 py-2 rounded-full inline-block mx-auto">
                                             {/* แก้ไข 1.2: ลดขนาดชื่อลูกค้าและกำหนดให้เป็นแถวเดียว */}
                                             <span className="text-3xl md:text-5xl font-bold block display-name-nowrap">คุณ {currentDisplayServing.name}</span>
                                         </div>

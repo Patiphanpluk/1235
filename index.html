@@ -378,33 +378,45 @@
 
             const handleSyncSheet = async () => {
                 if (!appsScriptUrl) { showToastFn("กรุณากรอก Apps Script URL", "error"); return; }
-                if (!externalLinkSheetId) { showToastFn("กรุณากรอก Sheet ID", "error"); return; }
-                if (!externalLinkBaseUrl) { showToastFn("กรุณากรอกลิ้งค์โฟลเดอร์ Google Drive (ในช่องลิ้งค์หลัก)", "error"); return; }
+                
+                // 1. ถ้ามีลิ้งค์โฟลเดอร์หลัก (externalLinkBaseUrl) ให้ส่งไปบันทึกที่ C1 (POST)
+                if (externalLinkBaseUrl) {
+                     try {
+                        await fetch(appsScriptUrl, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ link: externalLinkBaseUrl })
+                        });
+                        // ไม่รอผลลัพธ์เพราะ no-cors แต่อย่างน้อยก็ส่งไปแล้ว
+                     } catch (e) { console.error("Post link failed", e); }
+                }
 
                 setIsSyncing(true);
                 try {
-                    const scriptFullUrl = `${appsScriptUrl}?folderUrl=${encodeURIComponent(externalLinkBaseUrl)}&sheetName=${encodeURIComponent(externalLinkSheetName || 'Sheet1')}`;
-                    await fetch(scriptFullUrl, { mode: 'no-cors' });
-                    await new Promise(r => setTimeout(r, 3000));
-
-                    const response = await fetch(`https://docs.google.com/spreadsheets/d/${externalLinkSheetId}/export?format=csv&gid=0`);
-                    if (!response.ok) throw new Error("ไม่สามารถดึงข้อมูลได้ ตรวจสอบ Sheet ID และสิทธิ์การเข้าถึง (ต้องเป็น Public)");
+                    // 2. ดึงข้อมูล A:B มาทำ Mapping (GET)
+                    // Apps Script ใหม่จะ Return JSON [[A,B], [A,B], ...]
+                    const response = await fetch(appsScriptUrl);
+                    const json = await response.json(); 
                     
-                    const csvText = await response.text();
-                    const rows = csvText.split(/\r?\n/).slice(1).map(row => {
-                        const cells = row.split(',');
-                        if (cells.length >= 2) {
-                            return `${cells[0].trim()},${cells[1].trim()}`;
+                    if (Array.isArray(json)) {
+                        // แปลง Array เป็น CSV format สำหรับ Mapping state เดิม
+                        const mappingText = json.map(row => {
+                            const queueNo = row[0] || '';
+                            const link = row[1] || '';
+                            if(queueNo && link) return `${queueNo},${link}`;
+                            return null;
+                        }).filter(Boolean).join('\n');
+                        
+                        setExternalLinkMapping(mappingText);
+                        showToastFn("อัปเดตข้อมูลจาก Apps Script เรียบร้อย", "success");
+                        
+                        if (user && services) {
+                            let docRef = (typeof __app_id !== 'undefined') ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('settings').doc('main') : services.db.collection('settings').doc('main');
+                            await docRef.set({ externalLinkMapping: mappingText }, { merge: true });
                         }
-                        return null;
-                    }).filter(Boolean).join('\n');
-
-                    setExternalLinkMapping(rows);
-                    showToastFn("อัปเดตข้อมูลจาก Sheet เรียบร้อยแล้ว", "success");
-                    
-                    if (user && services) {
-                        let docRef = (typeof __app_id !== 'undefined') ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('settings').doc('main') : services.db.collection('settings').doc('main');
-                        await docRef.set({ externalLinkMapping: rows }, { merge: true });
+                    } else {
+                         throw new Error("รูปแบบข้อมูลจาก Script ไม่ถูกต้อง (ต้องเป็น JSON Array)");
                     }
                     
                 } catch (error) {
@@ -417,7 +429,7 @@
             // --- Handle Audio Enable ---
             const handleEnableAudio = () => {
                 initGlobalAudio();
-                const silentAudio = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTSVAAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////wAAAAD/84QAAAAAExAAAAAAAAABAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA";
+                const silentAudio = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTSVAAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////wAAAAD/84QAAAAAExAAAAAAAAABAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA";
                 const audio = new Audio(silentAudio);
                 
                 audio.play().then(() => { 
@@ -440,7 +452,7 @@
 
                 const handleKeyDown = (e) => {
                     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
-                    if (showSkipPopup || showClearPopup || showConfirmPopup || showEditPopup || showScanner || showScannedAction || showRecallWait || showAutoRecallModal || showCloseReasonModal) return;
+                    if (showSkipPopup || showClearPopup || showConfirmPopup || showEditPopup || showScanner || showScannedAction || showRecallWait || showAutoRecallModal || showCloseReasonModal || showHistory) return;
 
                     if (e.key === 'ArrowRight') {
                         if (currentServing) {
@@ -459,7 +471,7 @@
 
                 window.addEventListener('keydown', handleKeyDown);
                 return () => window.removeEventListener('keydown', handleKeyDown);
-            }, [viewMode, isAdminAuthenticated, queues, showSkipPopup, showClearPopup, showConfirmPopup, showEditPopup, showScanner, showScannedAction, showRecallWait, showAutoRecallModal, showCloseReasonModal, currentServing, waitingQueues]);
+            }, [viewMode, isAdminAuthenticated, queues, showSkipPopup, showClearPopup, showConfirmPopup, showEditPopup, showScanner, showScannedAction, showRecallWait, showAutoRecallModal, showCloseReasonModal, currentServing, waitingQueues, showHistory]);
 
             // Recall Countdown Logic
             useEffect(() => {
@@ -1112,6 +1124,61 @@
                             </div>
                         </div>
                     )}
+                    
+                    {/* Admin History Modal (New Fix) */}
+                    {showHistory && (
+                        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+                             <div className="bg-white rounded-2xl w-full max-w-2xl relative shadow-2xl flex flex-col max-h-[85vh]">
+                                 <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                                     <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                        <Icons.History size={20}/> ประวัติคิว ({showHistory === 'all' ? 'ทั้งหมด' : showHistory})
+                                     </h3>
+                                     <button onClick={() => setShowHistory(null)} className="text-slate-400 hover:text-slate-600"><Icons.Cross size={24}/></button>
+                                 </div>
+                                 <div className="p-0 overflow-y-auto flex-1 custom-scroll">
+                                     {historyList.length > 0 ? (
+                                         <table className="w-full text-left border-collapse">
+                                             <thead className="bg-slate-100 sticky top-0 z-10 shadow-sm">
+                                                 <tr>
+                                                     <th className="p-4 text-xs font-bold text-slate-500 uppercase">คิว</th>
+                                                     <th className="p-4 text-xs font-bold text-slate-500 uppercase">ชื่อ</th>
+                                                     <th className="p-4 text-xs font-bold text-slate-500 uppercase">เวลา</th>
+                                                     <th className="p-4 text-xs font-bold text-slate-500 uppercase">สถานะ</th>
+                                                 </tr>
+                                             </thead>
+                                             <tbody className="divide-y divide-slate-100">
+                                                 {historyList.map((q) => (
+                                                     <tr key={q.id} className="hover:bg-slate-50 transition-colors">
+                                                         <td className="p-4 font-bold text-slate-700">{q.number}</td>
+                                                         <td className="p-4 text-slate-600">{q.name}</td>
+                                                         <td className="p-4 text-sm text-slate-500">{new Date(q.createdAt).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}</td>
+                                                         <td className="p-4">
+                                                             <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                                                 q.status === 'completed' ? 'bg-green-100 text-green-700' : 
+                                                                 q.status === 'cancelled' ? 'bg-red-100 text-red-700' : 
+                                                                 q.status === 'serving' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'
+                                                             }`}>
+                                                                 {q.status}
+                                                             </span>
+                                                         </td>
+                                                     </tr>
+                                                 ))}
+                                             </tbody>
+                                         </table>
+                                     ) : (
+                                         <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                                             <Icons.History size={48} className="mb-4 opacity-50"/>
+                                             <p>ไม่พบประวัติการจอง</p>
+                                         </div>
+                                     )}
+                                 </div>
+                                 <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl text-right">
+                                     <span className="text-xs text-slate-400 mr-4">จำนวนทั้งหมด: {historyList.length} รายการ</span>
+                                     <button onClick={() => setShowHistory(null)} className="px-6 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold hover:bg-slate-100 text-sm shadow-sm">ปิดหน้าต่าง</button>
+                                 </div>
+                             </div>
+                        </div>
+                    )}
 
                     <div className="bg-white border-b border-slate-200 sticky top-0 z-50 px-2 py-2 sm:px-4 sm:py-3 shadow-sm">
                         <div className="max-w-7xl mx-auto flex justify-between items-center gap-2">
@@ -1345,7 +1412,7 @@
                                                         className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
                                                         placeholder="https://drive.google.com/..." 
                                                     />
-                                                    <p className="text-[10px] text-slate-400 mt-1">ลิ้งค์นี้จะถูกส่งไปให้ Apps Script ค้นหาไฟล์</p>
+                                                    <p className="text-[10px] text-slate-400 mt-1">ลิ้งค์นี้จะถูกส่งไปให้ Apps Script (บันทึกช่อง C1)</p>
                                                 </div>
 
                                                 {useSheetForLink ? (
@@ -1360,35 +1427,15 @@
                                                                 placeholder="https://script.google.com/macros/s/..." 
                                                             />
                                                         </div>
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            <div>
-                                                                <label className="block text-xs font-bold text-slate-500 mb-1 ml-1">Sheet ID</label>
-                                                                <input 
-                                                                    type="text" 
-                                                                    value={externalLinkSheetId || ''} 
-                                                                    onChange={e => setExternalLinkSheetId(e.target.value)} 
-                                                                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs" 
-                                                                    placeholder="1BxiMVs..." 
-                                                                />
-                                                            </div>
-                                                            <div>
-                                                                <label className="block text-xs font-bold text-slate-500 mb-1 ml-1">ชื่อแผ่นงาน (Sheet Name)</label>
-                                                                <input 
-                                                                    type="text" 
-                                                                    value={externalLinkSheetName || 'Sheet1'} 
-                                                                    onChange={e => setExternalLinkSheetName(e.target.value)} 
-                                                                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs" 
-                                                                    placeholder="Sheet1" 
-                                                                />
-                                                            </div>
-                                                        </div>
+                                                        {/* ไม่จำเป็นต้องใช้ Sheet ID/Name แล้วเพราะ Script จัดการเอง แต่เก็บไว้เผื่อ UI ไม่พัง */}
+                                                        
                                                         <button 
                                                             onClick={handleSyncSheet}
                                                             disabled={isSyncing}
                                                             className={`w-full flex items-center justify-center gap-2 text-white py-2 rounded-xl text-xs font-bold transition-colors shadow-sm mt-2 ${isSyncing ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'}`}
                                                         >
                                                             {isSyncing ? <Icons.Loader size={14} /> : <Icons.Sync size={14} />} 
-                                                            {isSyncing ? 'กำลังอัปเดต...' : 'อัปเดตข้อมูลจาก Cloud'}
+                                                            {isSyncing ? 'กำลังอัปเดต...' : 'บันทึกลิ้งค์หลัก & อัปเดตข้อมูล'}
                                                         </button>
                                                     </div>
                                                 ) : (

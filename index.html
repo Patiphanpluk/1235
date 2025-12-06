@@ -304,10 +304,10 @@
             
             // GAS Integration State
             const [gasWebAppUrl, setGasWebAppUrl] = useState('https://script.google.com/macros/s/AKfycbyHQ4b_69fLsfIV2rh8EMIkE3s3KlZVTz6im2btIAsvVAQJWJ5N6OrjO6sfLtNtSjykaQ/exec'); 
-            const [masterLinkC1, setMasterLinkC1] = useState(''); // Kept for state consistency, removed from UI
+            const [masterLinkC1, setMasterLinkC1] = useState(''); // Link to send to C1
             
             const [externalLinkLabel, setExternalLinkLabel] = useState('เปิดเอกสาร / โฟลเดอร์คิว'); 
-            const [useGasForLink, setUseGasForLink] = useState(true); // FIX: Default to GAS mode (Sheet Linker) as it's the required mode
+            const [useGasForLink, setUseGasForLink] = useState(true); // Always true for simplified UI
             const [testQueueId, setTestQueueId] = useState(''); 
             
             const [showSettings, setShowSettings] = useState(false);
@@ -494,15 +494,15 @@
             const handleSyncGAS = () => performGasSync(true);
 
 
-            // 2. Save Master Link to GAS (Write C1) (KEPT FOR CONSISTENCY BUT NOT USED IN NEW UI)
+            // 2. Save Master Link to GAS (Write C1) 
             const handleSaveToGAS = async (link) => {
                 if (!gasWebAppUrl) {
-                    // This should not happen since the button is only active if URL is present, but as a safeguard.
-                    console.error("GAS Web App URL is missing for write operation.");
-                    return;
+                    showToastFn("กรุณาระบุ Google Apps Script URL", "error");
+                    return false;
                 }
                 
                 try {
+                    showToastFn("กำลังส่งลิ้งค์ไปยัง Google Sheet...", "success");
                     const payload = { link: link, action: 'write' }; // 'action: write' for GAS script to identify writing to C1
                     
                     const response = await fetch(gasWebAppUrl, {
@@ -516,14 +516,18 @@
                     const text = await response.text();
                     
                     if (text.includes("Success")) {
-                        // No Toast needed here as this is triggered indirectly via the Open Link Button
-                        console.log("Link saved to C1 successfully via GAS.");
+                        showToastFn("ส่งลิ้งค์ไปยังคอลัมน์ C1 เรียบร้อย", "success");
+                        // Also save the link locally for the current user's setting to see it on load
+                        let docRef = (typeof __app_id !== 'undefined') ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('settings').doc('main') : services.db.collection('settings').doc('main');
+                        await docRef.set({ masterLinkC1: link }, { merge: true });
                         return true;
                     } else {
+                        showToastFn("ส่งลิ้งค์ไม่สำเร็จ: " + text, "error");
                         console.error("GAS Write Error:", text);
                         return false;
                     }
                 } catch (error) {
+                    showToastFn("ส่งลิ้งค์ไม่สำเร็จ: " + error.message, "error");
                     console.error("GAS Write Error:", error);
                     return false;
                 }
@@ -1074,7 +1078,7 @@
                                                 <Icons.Lock size={48} />
                                             </div>
                                             <div>
-                                                <h2 className="text-2xl font-bold text-slate-800">ปิดให้บริการ</h2>
+                                                <h2 className="2xl font-bold text-slate-800">ปิดให้บริการ</h2>
                                                 <p className="text-slate-500 mt-2 text-lg">{closedReason}</p>
                                             </div>
                                         </div>
@@ -1611,7 +1615,35 @@
                                                         className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
                                                         placeholder="https://script.google.com/..." 
                                                     />
+                                                    <p className="text-[10px] text-slate-400 mt-1">ใช้สำหรับดึงลิ้งค์ (A-B) และส่งลิ้งค์ (C1)</p>
                                                 </div>
+
+                                                {/* --- NEW C1 LINK INPUT --- */}
+                                                <div>
+                                                    <label className="block text-xs font-bold text-slate-500 mb-1 ml-1">ลิ้งค์ Google Drive (ส่งไป C1)</label>
+                                                    <div className="flex gap-2">
+                                                        <input 
+                                                            type="url" 
+                                                            value={masterLinkC1 || ''} 
+                                                            onChange={e => setMasterLinkC1(e.target.value)} 
+                                                            className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500" 
+                                                            placeholder="https://drive.google.com/..." 
+                                                        />
+                                                        
+                                                        {/* Conditional Send Button */}
+                                                        {masterLinkC1 && masterLinkC1.includes('drive.google.com/drive') && (
+                                                            <button 
+                                                                onClick={() => handleSaveToGAS(masterLinkC1)}
+                                                                className="flex-shrink-0 bg-green-500 hover:bg-green-600 text-white py-2 px-3 rounded-lg text-xs font-bold transition-colors"
+                                                            >
+                                                                ส่งลิ้งค์
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[10px] text-slate-400 mt-1">ปุ่ม 'ส่งลิ้งค์' จะแสดงเมื่อเป็นลิ้งค์ Google Drive เท่านั้น</p>
+                                                </div>
+                                                {/* --- END NEW C1 LINK INPUT --- */}
+
 
                                                 {/* 2. Link Button Label */}
                                                 <div>

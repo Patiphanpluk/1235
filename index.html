@@ -495,8 +495,38 @@
 
 
             // 2. Save Master Link to GAS (Write C1) (KEPT FOR CONSISTENCY BUT NOT USED IN NEW UI)
-            const handleSaveToGAS = async () => {
-                // This function is kept for code consistency but the UI elements that call it have been removed.
+            const handleSaveToGAS = async (link) => {
+                if (!gasWebAppUrl) {
+                    // This should not happen since the button is only active if URL is present, but as a safeguard.
+                    console.error("GAS Web App URL is missing for write operation.");
+                    return;
+                }
+                
+                try {
+                    const payload = { link: link, action: 'write' }; // 'action: write' for GAS script to identify writing to C1
+                    
+                    const response = await fetch(gasWebAppUrl, {
+                        method: 'POST',
+                        body: JSON.stringify(payload),
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-8', 
+                        }
+                    });
+
+                    const text = await response.text();
+                    
+                    if (text.includes("Success")) {
+                        // No Toast needed here as this is triggered indirectly via the Open Link Button
+                        console.log("Link saved to C1 successfully via GAS.");
+                        return true;
+                    } else {
+                        console.error("GAS Write Error:", text);
+                        return false;
+                    }
+                } catch (error) {
+                    console.error("GAS Write Error:", error);
+                    return false;
+                }
             };
 
             // --- Handle Audio Enable ---
@@ -1134,6 +1164,7 @@
                                  <div className="bg-white rounded-2xl w-full max-w-sm relative shadow-2xl flex flex-col max-h-[80vh]">
                                      <div className="p-4 border-b border-slate-100 flex justify-between items-center">
                                          <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Icons.History size={20}/> ประวัติการจองของฉัน</h3>
+                                         {/* Note: Customer history is ONLY stored in localStorage, which is cleared on global clear */}
                                          <button onClick={() => setShowMyHistory(false)} className="text-slate-400 hover:text-slate-600"><Icons.Cross size={24}/></button>
                                      </div>
                                      <div className="p-4 overflow-y-auto flex-1">
@@ -1570,9 +1601,9 @@
                                         {externalLinkEnabled && (
                                             <div className="mt-4 space-y-4 border-t border-slate-200 pt-4 animate-fade-in">
                                                 
-                                                {/* 1. GAS Web App URL */}
+                                                {/* 1. GAS Web App URL (Only relevant field for linking data) */}
                                                 <div>
-                                                    <label className="block text-xs font-bold text-slate-500 mb-1 ml-1 flex items-center gap-1"><Icons.GoogleScript size={12}/> Google Apps Script URL (Web App)</label>
+                                                    <label className="block text-xs font-bold text-slate-500 mb-1 ml-1 flex items-center gap-1"><Icons.GoogleScript size={12}/> Google Apps Script URL (Web App) (อ่าน/ส่ง)</label>
                                                     <input 
                                                         type="text" 
                                                         value={gasWebAppUrl || ''} 
@@ -1614,7 +1645,7 @@
                                                 {/* Auto-Sync Status Display */}
                                                 <div className="bg-white p-3 rounded-xl border border-slate-200 text-center space-y-2">
                                                     <h4 className="text-sm font-bold text-indigo-700 flex items-center justify-center gap-2">
-                                                        <Icons.Sync size={16} className="text-amber-500 animate-spin"/> อ่านลิ้งค์จาก Sheet (A-B)
+                                                        <Icons.Sync size={16} className="text-amber-500 animate-spin"/> สถานะการอ่านลิ้งค์จาก Sheet (A-B)
                                                     </h4>
                                                     <p className="text-xs text-slate-600">
                                                         ระบบจะดึงข้อมูลอัตโนมัติทุก <span className="font-bold text-indigo-600">5 วินาที</span> (ไม่ต้องกดเอง)

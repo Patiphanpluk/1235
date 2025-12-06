@@ -324,7 +324,8 @@
             const [showEditPopup, setShowEditPopup] = useState(null); 
             const [showScanner, setShowScanner] = useState(false); 
             const [showScannedAction, setShowScannedAction] = useState(null); 
-            const [showRecallWait, setShowRecallWait = useState(false); 
+            // FIXED: แก้ไข Syntax Error
+            const [showRecallWait, setShowRecallWait] = useState(false); 
             const [recallCountdown, setRecallCountdown] = useState(0);
             const [showLinkDataModal, setShowLinkDataModal] = useState(false); 
             
@@ -431,13 +432,17 @@
 
             const handleOpenExternalLink = (mappingString, queueNumber) => {
                 const url = getLinkForQueue(mappingString, queueNumber);
+                
+                console.log(`[Linker] Attempting to open link for Q: ${queueNumber}`);
                 if (url) {
                     let finalUrl = url;
                     if (!url.startsWith('http://') && !url.startsWith('https://')) {
                         finalUrl = 'https://' + url;
                     }
+                    console.log(`[Linker] Found URL: ${finalUrl}`);
                     window.open(finalUrl, '_blank');
                 } else {
+                    console.warn(`[Linker] No link found for Q: ${queueNumber}`);
                     showToastFn(`ไม่พบลิ้งค์สำหรับคิว ${queueNumber}`, 'error');
                 }
             };
@@ -1428,16 +1433,16 @@
                                                 </div>
                                                 
                                                 {/* Line 2: Customer Name (Left) and Date/Time (Right) */}
-                                                <div className="flex items-end justify-between mt-1 border-b border-slate-700 pb-1">
+                                                <div className="flex items-end justify-between mt-1 pb-1">
                                                     <div className="text-base font-medium text-slate-400 truncate max-w-[150px]">{q.name}</div>
                                                     {/* FIXED: แสดงวันที่และเวลา */}
-                                                    <span className="text-xs text-indigo-200 block font-medium">จองเมื่อ: {formatDateTime(q.createdAt)}</span>
+                                                    <span className="text-xs text-indigo-200 block font-medium">{formatDateTime(q.createdAt)}</span>
                                                 </div>
                                                 
                                                 {/* Line 3: Note (Full Width with Divider) */}
                                                 {(q.note || q.skipCount > 0) && (
                                                     // ใช้ flex-shrink-0 เพื่อให้แน่ใจว่าข้อความหมายเหตุจะไม่ถูกบีบ
-                                                    <div className="mt-2 pt-2 border-t border-slate-700 flex-shrink-0"> 
+                                                    <div className="mt-2 pt-2 border-t border-slate-600 flex-shrink-0"> 
                                                         <span className="text-sm font-bold text-red-400 block break-words">
                                                             {/* FIXED: ใช้ break-words เพื่อให้ข้อความยาว ๆ ขึ้นบรรทัดใหม่ได้ */}
                                                             {q.note ? `หมายเหตุ: ${q.note}` : `ถูกข้าม (${q.skipCount} ครั้ง)`}

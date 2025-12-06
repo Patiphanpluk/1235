@@ -25,7 +25,6 @@
         body { 
             font-family: 'Sarabun', sans-serif; 
             -webkit-tap-highlight-color: transparent; 
-            overflow-x: hidden; 
             background-color: #f8fafc; 
         }
         
@@ -324,10 +323,22 @@
                 setTimeout(() => setToast(prev => ({ ...prev, show: false })), 2000);
             };
 
+            // Force body scroll settings based on view mode
+            useEffect(() => {
+                if (viewMode === 'kiosk') {
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    document.body.style.overflow = 'auto';
+                }
+                return () => {
+                    document.body.style.overflow = 'auto';
+                };
+            }, [viewMode]);
+
             // --- Handle Audio Enable ---
             const handleEnableAudio = () => {
                 initGlobalAudio();
-                const silentAudio = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTSVAAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////wAAAAD/84QAAAAAExAAAAAAAAABAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA";
+                const silentAudio = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTSVAAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////wAAAAD/84QAAAAAExAAAAAAAAABAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA";
                 const audio = new Audio(silentAudio);
                 
                 audio.play().then(() => { 
@@ -663,36 +674,6 @@
                     setShowClearPopup(false);
                     showToastFn("ล้างข้อมูลและประวัติเรียบร้อยแล้ว", 'success');
                 } catch (err) { showToastFn("Error clearing: " + err.message, 'error'); }
-            };
-
-            // Toggle Logic
-            const handleServiceToggle = (e) => {
-                const newState = !serviceOpen;
-                if (newState === false) {
-                    // If turning OFF, show popup for reason
-                    setTempClosedReason('');
-                    setShowCloseReasonModal(true);
-                } else {
-                    // If turning ON, save immediately
-                    saveServiceStatus(true, '');
-                }
-            };
-
-            const confirmCloseService = () => {
-                const reason = tempClosedReason.trim() === "" ? "ปิดให้บริการชั่วคราว" : tempClosedReason.trim();
-                saveServiceStatus(false, reason);
-                setShowCloseReasonModal(false);
-            };
-
-            const saveServiceStatus = async (status, reason) => {
-                if (!user || !services) return;
-                try {
-                    let docRef = (typeof __app_id !== 'undefined') ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('settings').doc('main') : services.db.collection('settings').doc('main');
-                    await docRef.set({ serviceOpen: status, closedReason: reason }, { merge: true });
-                    setServiceOpen(status);
-                    if(!status) setClosedReason(reason);
-                    showToastFn(status ? "เปิดให้บริการแล้ว" : "ปิดให้บริการแล้ว", 'success');
-                } catch (err) { showToastFn("บันทึกไม่สำเร็จ: " + err.message, 'error'); }
             };
 
             const handleSaveSettings = async () => {

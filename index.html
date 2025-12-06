@@ -324,7 +324,7 @@
             const [showEditPopup, setShowEditPopup] = useState(null); 
             const [showScanner, setShowScanner] = useState(false); 
             const [showScannedAction, setShowScannedAction] = useState(null); 
-            const [showRecallWait, setShowRecallWait] = useState(false); 
+            const [showRecallWait, setShowRecallWait = useState(false); 
             const [recallCountdown, setRecallCountdown] = useState(0);
             const [showLinkDataModal, setShowLinkDataModal] = useState(false); 
             
@@ -1420,25 +1420,31 @@
                                             const isSkipped = q.skipCount > 0 || q.note;
                                             return (
                                             <div key={q.id} className="flex flex-col p-4 bg-slate-700 rounded-xl border border-slate-600 shadow-lg">
-                                                <div className="flex items-start justify-between">
-                                                    {/* FIXED: ย้ายชื่อลูกค้ามาไว้ใต้หมายเลขคิว */}
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="text-3xl font-black text-indigo-300 whitespace-nowrap">{q.number}</div>
-                                                        <div className="text-base font-medium text-slate-400 truncate max-w-[150px] mt-1">{q.name}</div>
-                                                    </div>
-                                                    
-                                                    <div className="ml-4 text-right">
-                                                        <div className="text-sm text-slate-500">{index + 1} คิวถัดไป</div>
-                                                        {isSkipped && (
-                                                            <div className="text-sm font-bold text-red-400">({q.note || 'ถูกข้าม'})</div>
-                                                        )}
-                                                    </div>
+                                                
+                                                {/* Line 1: Queue Number (Left) and Queue Count (Right) */}
+                                                <div className="flex items-end justify-between">
+                                                    <div className="text-3xl font-black text-indigo-300 whitespace-nowrap">{q.number}</div>
+                                                    <div className="text-sm text-slate-500">{index + 1} คิวถัดไป</div>
                                                 </div>
                                                 
-                                                {/* FIXED: แสดงวันที่และเวลาเต็มบรรทัด */}
-                                                <div className="mt-2 pt-2 border-t border-slate-600 text-right">
+                                                {/* Line 2: Customer Name (Left) and Date/Time (Right) */}
+                                                <div className="flex items-end justify-between mt-1 border-b border-slate-700 pb-1">
+                                                    <div className="text-base font-medium text-slate-400 truncate max-w-[150px]">{q.name}</div>
+                                                    {/* FIXED: แสดงวันที่และเวลา */}
                                                     <span className="text-xs text-indigo-200 block font-medium">จองเมื่อ: {formatDateTime(q.createdAt)}</span>
                                                 </div>
+                                                
+                                                {/* Line 3: Note (Full Width with Divider) */}
+                                                {(q.note || q.skipCount > 0) && (
+                                                    // ใช้ flex-shrink-0 เพื่อให้แน่ใจว่าข้อความหมายเหตุจะไม่ถูกบีบ
+                                                    <div className="mt-2 pt-2 border-t border-slate-700 flex-shrink-0"> 
+                                                        <span className="text-sm font-bold text-red-400 block break-words">
+                                                            {/* FIXED: ใช้ break-words เพื่อให้ข้อความยาว ๆ ขึ้นบรรทัดใหม่ได้ */}
+                                                            {q.note ? `หมายเหตุ: ${q.note}` : `ถูกข้าม (${q.skipCount} ครั้ง)`}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                
                                             </div>
                                             );
                                         })

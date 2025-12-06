@@ -36,6 +36,15 @@
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Toggle Switch Animation */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #4F46E5;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #4F46E5;
+        }
     </style>
 </head>
 <body class="text-slate-900 min-h-screen w-screen">
@@ -87,7 +96,6 @@
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d={d}/></svg>
         );
         
-        // รวม Icons ไว้ที่เดียวเพื่อความชัวร์
         const Icons = {
             User: (p) => <Icon d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2 M12 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8" {...p} />,
             Monitor: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||24} height={p.size||24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={p.className}><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>,
@@ -115,6 +123,20 @@
             Power: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||24} height={p.size||24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={p.className}><path d="M18.36 6.64a9 9 0 1 1-12.73 0" /><line x1="12" y1="2" x2="12" y2="12" /></svg>,
             Folder: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||24} height={p.size||24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={p.className}><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
         };
+
+        // --- UI Components ---
+
+        // New Custom Toggle Switch Component
+        const ToggleSwitch = ({ checked, onChange }) => (
+            <button 
+                onClick={onChange}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 focus:outline-none ${checked ? 'bg-green-500' : 'bg-slate-200'}`}
+            >
+                <span 
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${checked ? 'translate-x-6' : 'translate-x-1'}`} 
+                />
+            </button>
+        );
 
         // --- Audio Singleton to ensure persistent audio context ---
         let globalAudioContext = null;
@@ -275,15 +297,15 @@
             const [qrEnabled, setQrEnabled] = useState(false); 
             const [serviceOpen, setServiceOpen] = useState(true);
             const [closedReason, setClosedReason] = useState('');
-            const [historyEnabled, setHistoryEnabled] = useState(false); // New History Toggle
-            const [externalLinkEnabled, setExternalLinkEnabled] = useState(false); // New Link Toggle
-            const [externalLinkBaseUrl, setExternalLinkBaseUrl] = useState(''); // New Link URL
-            const [externalLinkLabel, setExternalLinkLabel] = useState('เปิดเอกสาร / โฟลเดอร์คิว'); // New Label State
+            const [historyEnabled, setHistoryEnabled] = useState(false); 
+            const [externalLinkEnabled, setExternalLinkEnabled] = useState(false); 
+            const [externalLinkBaseUrl, setExternalLinkBaseUrl] = useState(''); 
+            const [externalLinkLabel, setExternalLinkLabel] = useState('เปิดเอกสาร / โฟลเดอร์คิว'); 
             
             const [showSettings, setShowSettings] = useState(false);
             const [showHistory, setShowHistory] = useState(null); 
-            const [showMyHistory, setShowMyHistory] = useState(false); // For Customer History Modal
-            const [selectedHistoryItem, setSelectedHistoryItem] = useState(null); // For Detail History View
+            const [showMyHistory, setShowMyHistory] = useState(false); 
+            const [selectedHistoryItem, setSelectedHistoryItem] = useState(null); 
             
             // Popups & Toast State
             const [showSkipPopup, setShowSkipPopup] = useState(false);
@@ -338,7 +360,6 @@
                     document.body.style.overflow = 'hidden';
                 } else {
                     document.body.style.overflow = 'auto';
-                    // Scroll to top when switching to Admin or Display
                     window.scrollTo(0, 0);
                 }
                 return () => {
@@ -350,20 +371,13 @@
             const handleOpenExternalLink = (baseUrl, queueNumber) => {
                 if (!baseUrl) return;
                 
-                // Check if it's a Google Drive Folder Link
-                const drivePattern = /drive\.google\.com\/drive\/.*folders\/([a-zA-Z0-9_-]+)/;
-                const match = baseUrl.match(drivePattern);
+                // Search specifically for Folders with the EXACT name as the queue number
+                // Using "type:folder name:'QUEUE_NUMBER'"
+                // This is the standard search operator for Google Drive Web UI
+                const query = `type:folder name:"${queueNumber}"`;
+                const searchUrl = `https://drive.google.com/drive/search?q=${encodeURIComponent(query)}`;
                 
-                if (match && match[1]) {
-                    const parentId = match[1];
-                    // Fix: Use 'parent:FOLDER_ID NAME' for web UI search
-                    const query = `parent:${parentId} "${queueNumber}"`;
-                    const searchUrl = `https://drive.google.com/drive/search?q=${encodeURIComponent(query)}`;
-                    window.open(searchUrl, '_blank');
-                } else {
-                    // Default: Append queue number directly (Classic behavior for other sites)
-                    window.open(baseUrl + queueNumber, '_blank');
-                }
+                window.open(searchUrl, '_blank');
             };
 
             // --- Handle Audio Enable ---
@@ -1328,13 +1342,13 @@
                     {showSettings && (
                         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
                             <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto ring-1 ring-black/5">
-                                <h2 className="font-bold text-xl mb-6 text-slate-800 border-b border-slate-100 pb-4">ตั้งค่าระบบ</h2>
+                                <h2 className="font-bold text-lg mb-6 text-slate-800 border-b border-slate-100 pb-4">ตั้งค่าระบบ</h2>
                                 
                                 <div className="space-y-6">
                                     {/* Service Toggle */}
-                                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100">
                                         <div className="flex items-center gap-3">
-                                            <div className={`p-2.5 rounded-xl ${serviceOpen ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                            <div className={`p-2 rounded-xl ${serviceOpen ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
                                                 <Icons.Power size={20} />
                                             </div>
                                             <div className="text-left">
@@ -1344,50 +1358,30 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <button 
-                                            onClick={handleServiceToggle} 
-                                            className={`w-14 h-8 flex items-center rounded-full p-1 transition-all duration-300 ${serviceOpen ? 'bg-green-500 shadow-inner' : 'bg-slate-200 shadow-inner'}`}
-                                        >
-                                            <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${serviceOpen ? 'translate-x-6' : 'translate-x-0'}`}></div>
-                                        </button>
+                                        <ToggleSwitch checked={serviceOpen} onChange={handleServiceToggle} />
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-2 ml-1">ตัวอักษรนำหน้าคิว (Prefix)</label>
-                                        <input type="text" value={queuePrefix || ''} onChange={e => setQueuePrefix(e.target.value.toUpperCase())} className="w-full border border-slate-200 rounded-xl px-4 py-3 text-center text-2xl font-bold uppercase focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-slate-50" maxLength={2} />
+                                        <label className="block text-xs font-bold text-slate-700 mb-2 ml-1">ตัวอักษรนำหน้าคิว (Prefix)</label>
+                                        <input type="text" value={queuePrefix || ''} onChange={e => setQueuePrefix(e.target.value.toUpperCase())} className="w-full border border-slate-200 rounded-xl px-4 py-2 text-center text-xl font-bold uppercase focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-slate-50" maxLength={2} />
                                     </div>
                                     
-                                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <span className="text-sm font-bold text-slate-700 flex items-center gap-3"><Icons.QrCode size={20} className="text-slate-400"/> ระบบ QR Code</span>
-                                        <button 
-                                            onClick={() => setQrEnabled(!qrEnabled)} 
-                                            className={`w-14 h-8 flex items-center rounded-full p-1 transition-all duration-300 ${qrEnabled ? 'bg-indigo-600 shadow-inner' : 'bg-slate-200 shadow-inner'}`}
-                                        >
-                                            <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${qrEnabled ? 'translate-x-6' : 'translate-x-0'}`}></div>
-                                        </button>
+                                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <span className="text-sm font-bold text-slate-700 flex items-center gap-3"><Icons.QrCode size={18} className="text-slate-400"/> ระบบ QR Code</span>
+                                        <ToggleSwitch checked={qrEnabled} onChange={() => setQrEnabled(!qrEnabled)} />
                                     </div>
 
                                     {/* History Toggle */}
-                                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <span className="text-sm font-bold text-slate-700 flex items-center gap-3"><Icons.History size={20} className="text-slate-400"/> ประวัติการจองลูกค้า</span>
-                                        <button 
-                                            onClick={() => setHistoryEnabled(!historyEnabled)} 
-                                            className={`w-14 h-8 flex items-center rounded-full p-1 transition-all duration-300 ${historyEnabled ? 'bg-indigo-600 shadow-inner' : 'bg-slate-200 shadow-inner'}`}
-                                        >
-                                            <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${historyEnabled ? 'translate-x-6' : 'translate-x-0'}`}></div>
-                                        </button>
+                                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <span className="text-sm font-bold text-slate-700 flex items-center gap-3"><Icons.History size={18} className="text-slate-400"/> ประวัติการจองลูกค้า</span>
+                                        <ToggleSwitch checked={historyEnabled} onChange={() => setHistoryEnabled(!historyEnabled)} />
                                     </div>
 
                                     {/* External Link Toggle */}
                                     <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
                                         <div className="flex items-center justify-between mb-4">
-                                            <span className="text-sm font-bold text-slate-700 flex items-center gap-3"><Icons.Folder size={20} className="text-slate-400"/> ระบบลิ้งค์เอกสาร</span>
-                                            <button 
-                                                onClick={() => setExternalLinkEnabled(!externalLinkEnabled)} 
-                                                className={`w-14 h-8 flex items-center rounded-full p-1 transition-all duration-300 ${externalLinkEnabled ? 'bg-indigo-600 shadow-inner' : 'bg-slate-200 shadow-inner'}`}
-                                            >
-                                                <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${externalLinkEnabled ? 'translate-x-6' : 'translate-x-0'}`}></div>
-                                            </button>
+                                            <span className="text-sm font-bold text-slate-700 flex items-center gap-3"><Icons.Folder size={18} className="text-slate-400"/> ระบบลิ้งค์เอกสาร</span>
+                                            <ToggleSwitch checked={externalLinkEnabled} onChange={() => setExternalLinkEnabled(!externalLinkEnabled)} />
                                         </div>
                                         {externalLinkEnabled && (
                                             <div className="mt-4 space-y-4 border-t border-slate-200 pt-4 animate-fade-in">
@@ -1397,7 +1391,7 @@
                                                         type="text" 
                                                         value={externalLinkBaseUrl || ''} 
                                                         onChange={e => setExternalLinkBaseUrl(e.target.value)} 
-                                                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
+                                                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
                                                         placeholder="https://drive.google.com/..." 
                                                     />
                                                 </div>
@@ -1407,13 +1401,13 @@
                                                         type="text" 
                                                         value={externalLinkLabel || ''} 
                                                         onChange={e => setExternalLinkLabel(e.target.value)} 
-                                                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
+                                                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
                                                         placeholder="เปิดเอกสาร" 
                                                     />
                                                 </div>
                                                 <div className="bg-blue-50 p-3 rounded-xl flex gap-2 text-[10px] text-blue-600 border border-blue-100">
                                                     <div className="flex-shrink-0 mt-0.5">ℹ️</div>
-                                                    <div>ระบบจะค้นหาโฟลเดอร์/ไฟล์ที่มีชื่อตรงกับ "เลขคิว" ใน Google Drive ให้โดยอัตโนมัติ</div>
+                                                    <div>ระบบจะค้นหาโฟลเดอร์ที่มีชื่อตรงกับ "เลขคิว" ใน Google Drive ให้โดยอัตโนมัติ</div>
                                                 </div>
                                             </div>
                                         )}
@@ -1421,8 +1415,8 @@
                                 </div>
 
                                 <div className="flex gap-3 mt-8 pt-4 border-t border-slate-100">
-                                    <button onClick={() => setShowSettings(false)} className="flex-1 py-3 text-slate-500 hover:bg-slate-100 rounded-xl font-bold transition-colors">ยกเลิก</button>
-                                    <button onClick={handleSaveSettings} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all transform active:scale-95">บันทึก</button>
+                                    <button onClick={() => setShowSettings(false)} className="flex-1 py-2 text-slate-500 hover:bg-slate-100 rounded-xl font-bold transition-colors text-sm">ยกเลิก</button>
+                                    <button onClick={handleSaveSettings} className="flex-1 py-2 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all transform active:scale-95 text-sm">บันทึก</button>
                                 </div>
                             </div>
                         </div>

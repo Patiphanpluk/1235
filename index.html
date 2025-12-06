@@ -301,13 +301,13 @@
             const [historyEnabled, setHistoryEnabled] = useState(false); 
             const [externalLinkEnabled, setExternalLinkEnabled] = useState(false); 
             const [externalLinkMapping, setExternalLinkMapping] = useState(''); 
+            const [externalLinkLabel, setExternalLinkLabel] = useState('เปิดเอกสาร / โฟลเดอร์คิว'); 
             const [gasWebAppUrl, setGasWebAppUrl] = useState('https://script.google.com/macros/s/AKfycbyHQ4b_69fLsfIV2rh8EMIkE3s3KlZVTz6im2btIAsvVAQJWJ5N6OrjO6sfLtNtSjykaQ/exec'); 
             const [masterLinkC1, setMasterLinkC1] = useState(''); // Link to send to C1
             const [masterLinkTitle, setMasterLinkTitle] = useState(''); // NEW: Title for the master link
             const [lastGasSyncTime, setLastGasSyncTime] = useState(null); 
             const [lastSentLink, setLastSentLink] = useState(''); // NEW: Track the last successfully sent link
             
-            const [externalLinkLabel, setExternalLinkLabel] = useState('เปิดเอกสาร / โฟลเดอร์คิว'); 
             const [useGasForLink, setUseGasForLink] = useState(true); // Always true for simplified UI
             const [testQueueId, setTestQueueId] = useState(''); 
             
@@ -565,7 +565,7 @@
             // --- Handle Audio Enable ---
             const handleEnableAudio = () => {
                 initGlobalAudio();
-                const silentAudio = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTSVAAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////wAAAAD/84QAAAAAExAAAAAAAAABAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA";
+                const silentAudio = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTSVAAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////wAAAAD/84QAAAAAExAAAAAAAAABAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA";
                 const audio = new Audio(silentAudio);
                 
                 audio.play().then(() => { 
@@ -1056,8 +1056,8 @@
             const myQueue = queues.find(q => q.id === myQueueId);
             
             let historyList = [];
-            if (showHistory === 'all') historyList = [...queues].sort((a, b) => b.createdAt - a.createdAt);
-            else if (showHistory) historyList = queues.filter(q => q.status === showHistory).sort((a, b) => b.createdAt - a.createdAt);
+            if (showHistory === 'all') historyList = [...queues].sort((a, b) => b.createdAt - b.createdAt);
+            else if (showHistory) historyList = queues.filter(q => q.status === showHistory).sort((a, b) => b.createdAt - b.createdAt);
 
             if (configError) return <SetupError errorMsg={errorMsg} />;
             if (loading) return <div className="h-screen flex items-center justify-center text-slate-400">กำลังเชื่อมต่อระบบ...</div>;
@@ -1426,10 +1426,11 @@
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             <div className="lg:col-span-2 space-y-6">
                                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                                         {/* FIX 1: Copying structure from Waiting to ensure alignment and applying color */}
-                                        <h2 class="font-bold text-slate-800 flex items-center gap-2 whitespace-nowrap">
-                                            <Icons.Monitor class="text-indigo-600"/> Calling
+                                        <h2 className="font-bold text-slate-800 flex items-center gap-2 whitespace-nowrap">
+                                            {/* โค้ดที่แก้ไขตามคำขอของผู้ใช้: เปลี่ยน class เป็น className และเพิ่ม size={20} */}
+                                            <Icons.Monitor size={20} className="text-indigo-600"/> Calling
                                         </h2>
                                         
                                         {/* Auto Recall Status Indicator */}

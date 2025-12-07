@@ -119,7 +119,7 @@
             Users: (p) => <Icon d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75" {...p} />,
             Cross: (p) => <Icon d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20 M15 9l-6 6 M9 9l6 6" {...p} />,
             Volume: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||24} height={p.size||24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={p.className}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>,
-            Link: (p) => <Icon d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6 M15 3h6v6 M10 14L21 3" {...p} />,
+            Link: (p) => <Icon d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-3-2V8a2 2 0 0 1 2-2h6 M15 3h6v6 M10 14L21 3" {...p} />,
             Alert: (p) => <Icon d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z M12 9v4 M12 17h.01" {...p} />,
             Loader: (p) => <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>,
             Settings: (p) => (
@@ -141,7 +141,8 @@
             Sync: (p) => <Icon d="M21.5 2v6h-6 M21.34 5.5A10 10 0 1 0 22 12 M2.5 22v-6h6 M2.66 18.5A10 10 0 1 0 2 12" {...p} />,
             GoogleScript: (p) => <Icon d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71 M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" {...p} />,
             Link2: (p) => <Icon d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71 M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" {...p} />,
-            Time: (p) => <Icon d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20 M12 6v6l4 2 M6 3h12" {...p} /> // New Time/ETA icon
+            // FIXED: เปลี่ยนไอคอน Time เป็น Clock (เดิมเป็น Time ที่มีขีด)
+            Time: (p) => <Icon d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20 M12 6v6l4 2" {...p} />
         };
 
         // --- UI Components ---
@@ -325,8 +326,24 @@
         const getEstimatedTime = (queues, myQueueId, config) => {
             if (!config.enabled) return null;
             
+            // Determine the target queue based on context
+            let targetQueue;
+            if (myQueueId) {
+                // Kiosk Mode: Find my queue
+                targetQueue = queues.find(q => q.id === myQueueId && q.status === 'waiting');
+            } else {
+                // Display Mode: Target the first waiting queue (if myQueueId is null)
+                targetQueue = queues.find(q => q.status === 'waiting');
+            }
+
+            if (!targetQueue) {
+                // If the target is not waiting, we can't estimate its ETA
+                return null;
+            }
+
             // 1. Filter and sort queues that have completed service time metrics
             const completedQueues = queues
+                // Ensure calledAt and completedAt exist
                 .filter(q => q.status === 'completed' && q.calledAt && q.completedAt)
                 .sort((a, b) => b.completedAt - a.completedAt); // Sort by most recently completed
 
@@ -335,9 +352,9 @@
             const limit = config.limit || 5;
             const queuesToAverage = completedQueues.slice(0, limit);
 
+            // Need at least 3 samples for a somewhat reliable average
             if (queuesToAverage.length < 3) {
-                // Not enough history for a reliable estimate
-                return null;
+                return null; 
             }
 
             queuesToAverage.forEach(q => {
@@ -351,20 +368,7 @@
             // 3. Determine how many people are ahead of the current waiting queue
             const currentServing = queues.find(q => q.status === 'serving');
             
-            let targetQueue;
-            if (myQueueId) {
-                // Kiosk Mode: Find my queue and count those ahead of it
-                targetQueue = queues.find(q => q.id === myQueueId && q.status === 'waiting');
-            } else {
-                // Display Mode: Target the first waiting queue
-                targetQueue = queues.find(q => q.status === 'waiting');
-            }
-            
-            if (!targetQueue) {
-                return null; // No one waiting or my queue is already serving/completed
-            }
-            
-            // Count people *waiting* ahead of the target queue
+            // Count people *waiting* ahead of the target queue (based on creation time)
             const queuesAhead = queues.filter(q => 
                 q.status === 'waiting' && q.createdAt < targetQueue.createdAt
             ).length;
@@ -380,11 +384,63 @@
             }
             
             // 4. Calculate estimated time remaining
+            // FIXED: แก้ไขชื่อตัวแปรที่มีเว้นวรรค
             const estimatedTotalMs = totalPeopleAhead * averageServiceTimeMs;
             
+            // FIXED: แก้ไขชื่อตัวแปรที่มีเว้นวรรค
             return Math.ceil(estimatedTotalMs / 1000); // return in seconds
         };
 
+        /**
+         * Calculates the estimated time in seconds for a specific queue ID
+         * by finding its position in the waiting list.
+         * @param {Array<Object>} queues - All queue objects.
+         * @param {string} queueId - The ID of the queue to estimate.
+         * @param {Object} config - AI time configuration {enabled, limit}.
+         * @returns {number|null} Estimated time remaining in seconds, or null.
+         */
+        const getEstimatedTimeForQueueId = (queues, queueId, config) => {
+            if (!config.enabled) return null;
+            
+            const targetQueue = queues.find(q => q.id === queueId && q.status === 'waiting');
+            if (!targetQueue) return null;
+
+            // 1. Filter and sort completed queues to get average time
+            const completedQueues = queues
+                .filter(q => q.status === 'completed' && q.calledAt && q.completedAt)
+                .sort((a, b) => b.completedAt - a.completedAt); 
+
+            let totalServiceTime = 0;
+            const limit = config.limit || 5;
+            const queuesToAverage = completedQueues.slice(0, limit);
+
+            if (queuesToAverage.length < 3) return null;
+
+            queuesToAverage.forEach(q => {
+                const serviceDuration = q.completedAt - q.calledAt;
+                totalServiceTime += serviceDuration;
+            });
+            const averageServiceTimeMs = Math.max(30000, totalServiceTime / queuesToAverage.length); 
+
+            // 2. Determine number of people ahead
+            const currentServing = queues.find(q => q.status === 'serving');
+            
+            // Count people *waiting* ahead of the target queue (based on creation time)
+            const queuesAhead = queues.filter(q => 
+                q.status === 'waiting' && q.createdAt < targetQueue.createdAt
+            ).length;
+            
+            // Add 1 more if someone is currently being served
+            const currentServingFactor = currentServing ? 1 : 0;
+            
+            const totalPeopleAhead = queuesAhead + currentServingFactor;
+            
+            // FIXED: แก้ไขชื่อตัวแปรที่มีเว้นวรรค
+            const estimatedTotalMs = totalPeopleAhead * averageServiceTimeMs;
+            
+            // FIXED: แก้ไขชื่อตัวแปรที่มีเว้นวรรค
+            return Math.ceil(estimatedTotalMs / 1000); // return in seconds
+        }
 
         function App() {
             const ADMIN_EXPIRY_KEY = 'admin_session_expiry';
@@ -428,7 +484,7 @@
             // --- NEW: AI Time Estimation States ---
             const [aiQueueTimeEnabled, setAiQueueTimeEnabled] = useState(false);
             const [aiQueueTimeHistoryLimit, setAiQueueTimeHistoryLimit] = useState(5); // Use last 5 completed queues
-            const [estimatedTimeSeconds, setEstimatedTimeSeconds] = useState(null); // Estimated time in seconds
+            // Removed estimatedTimeSeconds state for central calculation
             // ---------------------------------------
             
             const [useGasForLink, setUseGasForLink] = useState(true); 
@@ -483,6 +539,9 @@
             const [qrExpireTime, setQrExpireTime] = useState(5); // Minutes
             const [qrTokenExpiry, setQrTokenExpiry] = useState(null);
             const [qrCountdown, setQrCountdown] = useState(0);
+            
+            // --- NEW: Time estimation for specific queues (to track countdown on display/kiosk) ---
+            const [etaMap, setEtaMap] = useState({}); // {queueId: seconds_remaining}
 
             const skipInputRef = useRef(null);
             const clearInputRef = useRef(null);
@@ -927,31 +986,79 @@
                 return () => { unsubQueues(); unsubSettings(); };
             }, [services, user]); 
             
-            // --- AI Time Estimation Countdown Logic (Updated) ---
+            // --- AI Time Estimation Countdown Logic (Updated for multiple ETAs) ---
             useEffect(() => {
                 let interval = null;
                 
-                if (aiQueueTimeEnabled && (viewMode === 'kiosk' || viewMode === 'display' || viewMode === 'admin')) {
+                const updateEtas = () => {
+                    if (!aiQueueTimeEnabled || (viewMode !== 'kiosk' && viewMode !== 'display')) {
+                        setEtaMap({});
+                        return;
+                    }
                     
-                    const calculateAndUpdateTime = () => {
-                        const estimatedSeconds = getEstimatedTime(queues, myQueueId, {
-                            enabled: aiQueueTimeEnabled,
-                            limit: aiQueueTimeHistoryLimit
-                        });
-                        setEstimatedTimeSeconds(estimatedSeconds);
-                    };
+                    const newEtas = {};
+                    
+                    // 1. Calculate the base average service time once
+                    const completedQueues = queues
+                        .filter(q => q.status === 'completed' && q.calledAt && q.completedAt)
+                        .sort((a, b) => b.completedAt - a.completedAt); 
 
-                    // Recalculate estimated time when queues change
-                    calculateAndUpdateTime(); 
+                    let totalServiceTime = 0;
+                    const limit = aiQueueTimeHistoryLimit || 5;
+                    const queuesToAverage = completedQueues.slice(0, limit);
                     
-                    // Start countdown interval
-                    interval = setInterval(() => {
-                        setEstimatedTimeSeconds(prev => (prev !== null && prev > 0) ? prev - 1 : (prev === 0 ? 0 : null));
-                    }, 1000);
+                    if (queuesToAverage.length < 3) {
+                        setEtaMap({}); // Not enough data
+                        return;
+                    }
+
+                    queuesToAverage.forEach(q => {
+                        const serviceDuration = q.completedAt - q.calledAt;
+                        totalServiceTime += serviceDuration;
+                    });
+                    const averageServiceTimeMs = Math.max(30000, totalServiceTime / queuesToAverage.length); 
                     
-                } else {
-                    setEstimatedTimeSeconds(null);
-                }
+                    const currentServing = queues.find(q => q.status === 'serving');
+                    
+                    // 2. Identify all waiting queues sorted by priority
+                    const waitingQueuesByPriority = queues.filter(q => q.status === 'waiting').sort((a, b) => a.createdAt - b.createdAt);
+                    
+                    // 3. Calculate ETA for each waiting queue
+                    waitingQueuesByPriority.forEach((targetQueue, index) => {
+                        // Position in line: index (0-based) + 1 if someone is currently serving
+                        const totalPeopleAhead = index + (currentServing ? 1 : 0);
+                        
+                        let estimatedTotalMs;
+                        if (totalPeopleAhead === 0) {
+                            estimatedTotalMs = Math.max(60000, averageServiceTimeMs); // Minimum 1 min or 1 avg time
+                        } else {
+                            estimatedTotalMs = totalPeopleAhead * averageServiceTimeMs;
+                        }
+
+                        // Store the ETA (in seconds)
+                        newEtas[targetQueue.id] = Math.ceil(estimatedTotalMs / 1000);
+                    });
+                    
+                    setEtaMap(newEtas);
+                };
+                
+                // Recalculate ETA map whenever queues, myQueueId, or config changes
+                updateEtas(); 
+                
+                // Countdown interval (decrements existing ETAs by 1 second)
+                interval = setInterval(() => {
+                    setEtaMap(prev => {
+                        const updated = {};
+                        let changed = false;
+                        for (const id in prev) {
+                            const newTime = Math.max(0, prev[id] - 1);
+                            if (newTime !== prev[id]) changed = true;
+                            updated[id] = newTime;
+                        }
+                        // Only update state if something changed (time actually counted down)
+                        return changed ? updated : prev;
+                    });
+                }, 1000);
 
                 return () => clearInterval(interval);
             }, [queues, myQueueId, aiQueueTimeEnabled, aiQueueTimeHistoryLimit, viewMode]);
@@ -1544,6 +1651,9 @@
             }
 
             if (viewMode === 'kiosk') {
+                // Get ETA for my queue only in Kiosk mode
+                const myEtaSeconds = aiQueueTimeEnabled && myQueue ? etaMap[myQueue.id] : null;
+
                 return (
                     // กล่องหลักสำหรับหน้า KIOSK
                     <div className="h-[100dvh] w-screen bg-slate-100 flex flex-col overflow-hidden fixed inset-0">
@@ -1592,11 +1702,11 @@
                                             </button>
                                             <div className="text-center text-slate-400 text-sm">รออยู่ <span className="text-indigo-600 font-bold">{queues.filter(q => q.status === 'waiting').length}</span> คิว</div>
                                             
-                                            {/* Estimated Time (Display Mode: Target first waiting queue) */}
-                                            {aiQueueTimeEnabled && estimatedTimeSeconds !== null && (
+                                            {/* Estimated Time (Kiosk Mode: Target first waiting queue - BEFORE booking) */}
+                                            {aiQueueTimeEnabled && waitingQueues.length > 0 && etaMap[waitingQueues[0].id] !== undefined && (
                                                 <div className="text-center text-sm text-green-600 font-bold bg-green-50 p-3 rounded-lg border border-green-100 animate-fade-in">
                                                     <Icons.Time size={16} className="inline-block mr-1"/>
-                                                    คิวถัดไปคาดว่าจะใช้เวลา: {formatSecondsToMinutes(estimatedTimeSeconds)}
+                                                    คิวถัดไปคาดว่าจะใช้เวลา: {formatSecondsToMinutes(etaMap[waitingQueues[0].id])}
                                                 </div>
                                             )}
                                             
@@ -1648,10 +1758,10 @@
                                     </div>
 
                                     {/* Estimated Time (Kiosk Mode: Target my queue) */}
-                                    {aiQueueTimeEnabled && myQueue.status === 'waiting' && estimatedTimeSeconds !== null && (
+                                    {aiQueueTimeEnabled && myQueue.status === 'waiting' && myEtaSeconds !== null && (
                                         <div className="text-center text-sm text-green-600 font-bold bg-green-50 p-3 rounded-lg border border-green-100 animate-fade-in">
                                             <Icons.Time size={16} className="inline-block mr-1"/>
-                                            คาดว่าคิวจะถึงใน: {formatSecondsToMinutes(estimatedTimeSeconds)}
+                                            คาดว่าคิวจะถึงใน: {formatSecondsToMinutes(myEtaSeconds)}
                                         </div>
                                     )}
 
@@ -1663,7 +1773,7 @@
                                             </div>
                                             <div className="text-right">
                                                 <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">รออีก (คิว)</div>
-                                                <div className="text-2xl font-black text-slate-700 leading-none">{queues.filter(q => q.status === 'waiting' && q.createdAt < myQueue.createdAt).length}</div>
+                                                <div className="2xl font-black text-slate-700 leading-none">{queues.filter(q => q.status === 'waiting' && q.createdAt < myQueue.createdAt).length}</div>
                                             </div>
                                         </div>
                                         <div className="flex justify-between items-center text-sm pt-1">
@@ -1893,7 +2003,7 @@
                         {/* FIXED: ใช้ max-w-full เพื่อให้ยืดเต็มจอ */}
                         <div className="w-full max-w-full mx-auto px-0 flex-shrink-0 text-center mb-4 sm:mb-6">
                             <h1 className="text-4xl sm:text-6xl font-black mb-2 text-indigo-400">ระบบแสดงคิวบริการ</h1>
-                            <p className="text-xl text-slate-400">Queue & Calling Display</p>
+                            <p className="xl text-slate-400">Queue & Calling Display</p>
                         </div>
                         
                         {/* FIXED: 3. Layout: ใช้ flex-1 และ gap-6 เพื่อให้ขยายเต็มพื้นที่ที่เหลือ และใช้ max-w-full */}
@@ -1937,10 +2047,10 @@
                                 )}
                                 
                                 {/* Estimated Time for next queue (Display Mode: Target first waiting queue) */}
-                                {aiQueueTimeEnabled && !currentDisplayServing && estimatedTimeSeconds !== null && (
+                                {aiQueueTimeEnabled && !currentDisplayServing && waitingForDisplay.length > 0 && etaMap[waitingForDisplay[0].id] !== undefined && (
                                     <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl text-center text-sm text-green-300 font-bold border border-white/30 animate-fade-in w-11/12 max-w-sm">
                                         <Icons.Time size={16} className="inline-block mr-1 text-green-300"/>
-                                        คิวถัดไปคาดว่าจะใช้เวลา: {formatSecondsToMinutes(estimatedTimeSeconds)}
+                                        คิวถัดไปคาดว่าจะถึงใน: {formatSecondsToMinutes(etaMap[waitingForDisplay[0].id])}
                                     </div>
                                 )}
                             </div>
@@ -1961,14 +2071,25 @@
                                     {waitingForDisplay.length > 0 ? (
                                         waitingForDisplay.map((q, index) => {
                                             const isSkipped = q.skipCount > 0 || q.note;
+                                            const etaSeconds = etaMap[q.id];
+                                            const showEta = aiQueueTimeEnabled && etaSeconds !== undefined && etaSeconds !== null && etaSeconds > 0;
                                             return (
                                             <div key={q.id} className="flex flex-col p-4 bg-slate-700 rounded-xl border border-slate-600 shadow-lg">
                                                 
                                                 {/* Line 1: Queue Number (Left) and Queue Count (Right) */}
-                                                <div className="flex items-end justify-between">
+                                                <div className="flex items-center justify-between">
                                                     {/* แก้ไข 1.3: ลดขนาดหมายเลขคิวที่รอคิว */}
                                                     <div className="text-2xl font-black text-indigo-300 whitespace-nowrap">{q.number}</div>
-                                                    <div className="text-sm text-slate-500">{index + 1} คิวถัดไป</div>
+                                                    
+                                                    {/* NEW: Estimated Time per queue */}
+                                                    {showEta ? (
+                                                        <div className="text-sm text-green-400 font-bold flex items-center">
+                                                            <Icons.Time size={14} className="mr-1"/> 
+                                                            {formatSecondsToMinutes(etaSeconds)}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-sm text-slate-500">{index + 1} คิวถัดไป</div>
+                                                    )}
                                                 </div>
                                                 
                                                 {/* Line 2: Customer Name (Left) and Date/Time (Right) */}

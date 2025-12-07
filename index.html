@@ -140,7 +140,8 @@
             Sheet: (p) => <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8" {...p} />,
             Sync: (p) => <Icon d="M21.5 2v6h-6 M21.34 5.5A10 10 0 1 0 22 12 M2.5 22v-6h6 M2.66 18.5A10 10 0 1 0 2 12" {...p} />,
             GoogleScript: (p) => <Icon d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71 M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" {...p} />,
-            Link2: (p) => <Icon d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71 M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" {...p} />
+            Link2: (p) => <Icon d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71 M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" {...p} />,
+            Time: (p) => <Icon d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20 M12 6v6l4 2 M6 3h12" {...p} /> // New Time/ETA icon
         };
 
         // --- UI Components ---
@@ -301,6 +302,89 @@
                 </div>
             );
         };
+        
+        /**
+         * Converts total seconds into "MM:SS" format.
+         * @param {number} seconds - Total seconds remaining.
+         * @returns {string} Formatted time string.
+         */
+        const formatSecondsToMinutes = (seconds) => {
+            const totalSeconds = Math.max(0, Math.floor(seconds));
+            const min = Math.floor(totalSeconds / 60);
+            const sec = totalSeconds % 60;
+            return `${String(min).padStart(2, '0')} นาที ${String(sec).padStart(2, '0')} วินาที`;
+        };
+
+        /**
+         * Estimates the remaining time for a waiting queue based on past service history.
+         * @param {Array<Object>} queues - All queue objects.
+         * @param {string|null} myQueueId - The ID of the current user's queue (for Kiosk Mode).
+         * @param {Object} config - AI time configuration {enabled, limit}.
+         * @returns {number|null} Estimated time remaining in seconds, or null if calculation is not possible.
+         */
+        const getEstimatedTime = (queues, myQueueId, config) => {
+            if (!config.enabled) return null;
+            
+            // 1. Filter and sort queues that have completed service time metrics
+            const completedQueues = queues
+                .filter(q => q.status === 'completed' && q.calledAt && q.completedAt)
+                .sort((a, b) => b.completedAt - a.completedAt); // Sort by most recently completed
+
+            // 2. Calculate average service time (in milliseconds)
+            let totalServiceTime = 0;
+            const limit = config.limit || 5;
+            const queuesToAverage = completedQueues.slice(0, limit);
+
+            if (queuesToAverage.length < 3) {
+                // Not enough history for a reliable estimate
+                return null;
+            }
+
+            queuesToAverage.forEach(q => {
+                const serviceDuration = q.completedAt - q.calledAt;
+                totalServiceTime += serviceDuration;
+            });
+
+            // Ensure the average is at least 30 seconds (30000ms) to prevent overly aggressive estimates
+            const averageServiceTimeMs = Math.max(30000, totalServiceTime / queuesToAverage.length); // in ms
+
+            // 3. Determine how many people are ahead of the current waiting queue
+            const currentServing = queues.find(q => q.status === 'serving');
+            
+            let targetQueue;
+            if (myQueueId) {
+                // Kiosk Mode: Find my queue and count those ahead of it
+                targetQueue = queues.find(q => q.id === myQueueId && q.status === 'waiting');
+            } else {
+                // Display Mode: Target the first waiting queue
+                targetQueue = queues.find(q => q.status === 'waiting');
+            }
+            
+            if (!targetQueue) {
+                return null; // No one waiting or my queue is already serving/completed
+            }
+            
+            // Count people *waiting* ahead of the target queue
+            const queuesAhead = queues.filter(q => 
+                q.status === 'waiting' && q.createdAt < targetQueue.createdAt
+            ).length;
+            
+            // Add 1 more if someone is currently being served
+            const currentServingFactor = currentServing ? 1 : 0;
+            
+            const totalPeopleAhead = queuesAhead + currentServingFactor;
+
+            if (totalPeopleAhead === 0) {
+                // If there is no one ahead, estimate 1 average service time (or 1 minute minimum)
+                return Math.max(60, Math.ceil(averageServiceTimeMs / 1000));
+            }
+            
+            // 4. Calculate estimated time remaining
+            const estimatedTotalMs = totalPeopleAhead * averageServiceTimeMs;
+            
+            return Math.ceil(estimatedTotalMs / 1000); // return in seconds
+        };
+
 
         function App() {
             const ADMIN_EXPIRY_KEY = 'admin_session_expiry';
@@ -318,13 +402,11 @@
             const [errorMsg, setErrorMsg] = useState('');
             const [audioEnabled, setAudioEnabled] = useState(false);
             
-            // --- NEW: Admin Auth State ---
             const initialAdminAuth = () => {
                 const storedExpiry = localStorage.getItem(ADMIN_EXPIRY_KEY);
                 return storedExpiry && Date.now() < parseInt(storedExpiry);
             };
             const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(initialAdminAuth);
-            // -----------------------------
             
             // Settings State
             const [queuePrefix, setQueuePrefix] = useState('A'); 
@@ -336,16 +418,20 @@
             const [externalLinkMapping, setExternalLinkMapping] = useState(''); 
             const [externalLinkLabel, setExternalLinkLabel] = useState('เปิดเอกสาร / โฟลเดอร์คิว'); 
             const [gasWebAppUrl, setGasWebAppUrl] = useState('https://script.google.com/macros/s/AKfycbyHQ4b_69fLsfIV2rh8EMIkE3s3KlZVTz6im2btIAsvVAQJWJ5N6OrjO6sfLtNtSjykaQ/exec'); 
-            const [masterLinkC1, setMasterLinkC1] = useState(''); // Link to send to C1
-            const [masterLinkTitle, setMasterLinkTitle] = useState(''); // NEW: Title for the master link
+            const [masterLinkC1, setMasterLinkC1] = useState(''); 
+            const [masterLinkTitle, setMasterLinkTitle] = useState(''); 
             const [lastGasSyncTime, setLastGasSyncTime] = useState(null); 
-            const [lastSentLink, setLastSentLink] = useState(''); // NEW: Track the last successfully sent link
+            const [lastSentLink, setLastSentLink] = useState(''); 
             
-            // --- NEW: Admin Session Duration State ---
-            const [adminSessionDuration, setAdminSessionDuration] = useState(() => parseInt(localStorage.getItem(ADMIN_DURATION_KEY) || 60)); // Default 60 mins
-            // -----------------------------------------
+            const [adminSessionDuration, setAdminSessionDuration] = useState(() => parseInt(localStorage.getItem(ADMIN_DURATION_KEY) || 60)); 
             
-            const [useGasForLink, setUseGasForLink] = useState(true); // Always true for simplified UI
+            // --- NEW: AI Time Estimation States ---
+            const [aiQueueTimeEnabled, setAiQueueTimeEnabled] = useState(false);
+            const [aiQueueTimeHistoryLimit, setAiQueueTimeHistoryLimit] = useState(5); // Use last 5 completed queues
+            const [estimatedTimeSeconds, setEstimatedTimeSeconds] = useState(null); // Estimated time in seconds
+            // ---------------------------------------
+            
+            const [useGasForLink, setUseGasForLink] = useState(true); 
             const [testQueueId, setTestQueueId] = useState(''); 
             
             const [showSettings, setShowSettings] = useState(false);
@@ -700,7 +786,8 @@
                     
                     if (e.key === 'Enter') {
                         const currentServing = queues.find(q => q.status === 'serving');
-                        if (currentServing) updateStatus(currentServing.id, 'completed');
+                        // Add completedAt timestamp when status is set to 'completed'
+                        if (currentServing) updateStatus(currentServing.id, 'completed', Date.now());
                     }
                 };
 
@@ -805,20 +892,24 @@
                         if (data.externalLinkEnabled !== undefined) setExternalLinkEnabled(data.externalLinkEnabled);
                         if (data.externalLinkMapping !== undefined) setExternalLinkMapping(data.externalLinkMapping);
                         if (data.externalLinkLabel !== undefined) setExternalLinkLabel(data.externalLinkLabel);
-                        // QR Settings (NEW)
-                        if (data.qrExpireEnabled !== undefined) setQrExpireEnabled(data.qrExpireEnabled);
-                        if (data.qrExpireTime !== undefined) setQrExpireTime(data.qrExpireTime);
-                        if (data.qrToken) setQrToken(data.qrToken);
-                        if (data.qrTokenExpiry !== undefined) setQrTokenExpiry(data.qrTokenExpiry);
                         
-                        // --- NEW: Admin Session Duration Setting ---
                         if (data.adminSessionDuration !== undefined) {
                             const duration = parseInt(data.adminSessionDuration) || 60;
                             setAdminSessionDuration(duration);
                             // Also save to localStorage for AdminLogin component
                             localStorage.setItem(ADMIN_DURATION_KEY, duration.toString());
                         }
-                        // -------------------------------------------
+                        
+                        // --- AI Time Estimation Setting Load ---
+                        if (data.aiQueueTimeEnabled !== undefined) setAiQueueTimeEnabled(data.aiQueueTimeEnabled);
+                        if (data.aiQueueTimeHistoryLimit !== undefined) setAiQueueTimeHistoryLimit(parseInt(data.aiQueueTimeHistoryLimit) || 5);
+                        // ---------------------------------------
+                        
+                        // QR Settings (NEW)
+                        if (data.qrExpireEnabled !== undefined) setQrExpireEnabled(data.qrExpireEnabled);
+                        if (data.qrExpireTime !== undefined) setQrExpireTime(data.qrExpireTime);
+                        if (data.qrToken) setQrToken(data.qrToken);
+                        if (data.qrTokenExpiry !== undefined) setQrTokenExpiry(data.qrTokenExpiry);
                         
                         if (data.gasWebAppUrl !== undefined) setGasWebAppUrl(data.gasWebAppUrl);
                         if (data.masterLinkC1 !== undefined) setMasterLinkC1(data.masterLinkC1);
@@ -835,6 +926,36 @@
                 }, err => console.log("Settings sync skipped"));
                 return () => { unsubQueues(); unsubSettings(); };
             }, [services, user]); 
+            
+            // --- AI Time Estimation Countdown Logic (Updated) ---
+            useEffect(() => {
+                let interval = null;
+                
+                if (aiQueueTimeEnabled && (viewMode === 'kiosk' || viewMode === 'display' || viewMode === 'admin')) {
+                    
+                    const calculateAndUpdateTime = () => {
+                        const estimatedSeconds = getEstimatedTime(queues, myQueueId, {
+                            enabled: aiQueueTimeEnabled,
+                            limit: aiQueueTimeHistoryLimit
+                        });
+                        setEstimatedTimeSeconds(estimatedSeconds);
+                    };
+
+                    // Recalculate estimated time when queues change
+                    calculateAndUpdateTime(); 
+                    
+                    // Start countdown interval
+                    interval = setInterval(() => {
+                        setEstimatedTimeSeconds(prev => (prev !== null && prev > 0) ? prev - 1 : (prev === 0 ? 0 : null));
+                    }, 1000);
+                    
+                } else {
+                    setEstimatedTimeSeconds(null);
+                }
+
+                return () => clearInterval(interval);
+            }, [queues, myQueueId, aiQueueTimeEnabled, aiQueueTimeHistoryLimit, viewMode]);
+            // --- END AI Time Estimation Countdown Logic ---
 
             // --- QR Code Auto-Update Logic (Display Mode/Admin Mode) ---
             useEffect(() => {
@@ -997,8 +1118,8 @@
                 const queueNumber = `${queuePrefix}-${nextNum}`;
                 try {
                     let collectionRef = (typeof __app_id !== 'undefined') ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('queues') : services.db.collection('queues');
-                    // Removed old 'timestamp' field and now rely solely on 'createdAt'
-                    const ref = await collectionRef.add({ number: queueNumber, name: customerName, status: 'waiting', createdAt: Date.now(), skipCount: 0, note: '' });
+                    // Add createdAt only (completedAt will be added when status changes to 'completed')
+                    const ref = await collectionRef.add({ number: queueNumber, name: customerName, status: 'waiting', createdAt: Date.now(), calledAt: null, completedAt: null, skipCount: 0, note: '' });
                     localStorage.setItem('my_queue_id', ref.id);
                     
                     // Save to local history
@@ -1021,7 +1142,13 @@
                 } catch (err) { showToastFn(err.message, 'error'); } finally { setIsSubmitting(false); }
             };
 
-            const updateStatus = async (id, status) => {
+            /**
+             * Updates the status of a queue. Automatically handles setting timestamps.
+             * @param {string} id - Queue ID.
+             * @param {string} status - New status ('serving', 'completed', 'waiting', 'cancelled').
+             * @param {number} [completedAt=null] - Optional timestamp for 'completed' status.
+             */
+            const updateStatus = async (id, status, completedAt = null) => {
                 if (!user) return;
                 try {
                     // Check if stopping auto recall is needed
@@ -1030,7 +1157,23 @@
                     }
 
                     let docRef = (typeof __app_id !== 'undefined') ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('queues').doc(id) : services.db.collection('queues').doc(id);
-                    const updateData = { status }; if (status === 'serving') updateData.calledAt = Date.now();
+                    const updateData = { status }; 
+                    
+                    if (status === 'serving') {
+                        updateData.calledAt = Date.now();
+                        updateData.completedAt = null; // Clear completion time if recalling
+                    } else if (status === 'completed') {
+                        updateData.completedAt = completedAt || Date.now(); // Record actual completion time
+                    } else if (status === 'waiting') {
+                        // Reset timestamps if status is manually set back to waiting
+                        updateData.calledAt = null;
+                        updateData.completedAt = null;
+                    } else if (status === 'cancelled') {
+                        // Reset timestamps for cancelled
+                        updateData.calledAt = null;
+                        updateData.completedAt = null;
+                    }
+                    
                     await docRef.update(updateData);
                     if(showScannedAction) setShowScannedAction(null); 
                 } catch (err) { console.error(err); }
@@ -1053,10 +1196,29 @@
                 const currentSkipCount = queueToSkip.skipCount || 0;
                 let newCreatedAt = queueToSkip.createdAt;
                 const waitingList = queues.filter(q => q.status === 'waiting');
-                if (currentSkipCount === 0) { if (waitingList.length > 0) newCreatedAt = waitingList[0].createdAt + 1; else newCreatedAt = Date.now(); } else { newCreatedAt = Date.now(); }
+                // The priority logic is: if skipped for the first time, insert after the oldest waiting queue. 
+                // If skipped multiple times, reset to the end of the queue.
+                if (currentSkipCount === 0) { 
+                    if (waitingList.length > 0) {
+                        // Find the oldest *waiting* queue and insert this one after it
+                        newCreatedAt = waitingList[0].createdAt - 1; 
+                    } else {
+                        newCreatedAt = Date.now(); 
+                    }
+                } else { 
+                    newCreatedAt = Date.now(); 
+                }
+                
                 try {
                     let docRef = (typeof __app_id !== 'undefined') ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('queues').doc(queueToSkip.id) : services.db.collection('queues').doc(queueToSkip.id);
-                    await docRef.update({ status: 'waiting', note: noteToSave, skipCount: currentSkipCount + 1, createdAt: newCreatedAt });
+                    await docRef.update({ 
+                        status: 'waiting', 
+                        note: noteToSave, 
+                        skipCount: currentSkipCount + 1, 
+                        createdAt: newCreatedAt,
+                        calledAt: null, // Clear calling time
+                        completedAt: null, // Clear completion time
+                    });
                     setShowSkipPopup(false); setQueueToSkip(null);
                     if(showScannedAction) setShowScannedAction(null);
                 } catch (err) { showToastFn(err.message, 'error'); }
@@ -1067,7 +1229,6 @@
                 if (!user) return;
                 
                 // If manual recall is pressed while auto is running, stop auto first? 
-                // Or just let it be. Let's safeguard by stopping auto if manual is pressed.
                 if (autoRecallState.active && autoRecallState.timer) {
                     stopAutoRecall();
                 }
@@ -1078,7 +1239,11 @@
 
                 try {
                     let docRef = (typeof __app_id !== 'undefined') ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('queues').doc(id) : services.db.collection('queues').doc(id);
-                    await docRef.update({ status: 'serving', calledAt: Date.now() });
+                    await docRef.update({ 
+                        status: 'serving', 
+                        calledAt: Date.now(),
+                        completedAt: null, // Clear completion time on recall
+                    });
                     setShowHistory(null);
                     if(showScannedAction) setShowScannedAction(null);
                 } catch (err) { console.error(err); }
@@ -1109,7 +1274,11 @@
                 // Trigger Recall (Update Firestore)
                 try {
                     let docRef = (typeof __app_id !== 'undefined') ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('queues').doc(queueId) : services.db.collection('queues').doc(queueId);
-                    await docRef.update({ status: 'serving', calledAt: Date.now() });
+                    await docRef.update({ 
+                        status: 'serving', 
+                        calledAt: Date.now(),
+                        completedAt: null, // Clear completion time on recall
+                    });
                 } catch (err) { console.error("Auto recall error", err); }
 
                 // Schedule Next Step if not finished
@@ -1232,6 +1401,8 @@
                 }
                 
                 const durationToSave = parseInt(adminSessionDuration) > 0 ? parseInt(adminSessionDuration) : 60;
+                const historyLimitToSave = parseInt(aiQueueTimeHistoryLimit) > 0 ? parseInt(aiQueueTimeHistoryLimit) : 5;
+
 
                 try {
                     let docRef = (typeof __app_id !== 'undefined') ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('settings').doc('main') : services.db.collection('settings').doc('main');
@@ -1250,9 +1421,12 @@
                         // QR Settings (NEW)
                         qrExpireEnabled: qrExpireEnabled,
                         qrExpireTime: parseInt(qrExpireTime) > 0 ? parseInt(qrExpireTime) : 5, // Ensure positive integer or default
-                        // --- NEW: Admin Session Duration Setting Save ---
+                        // Admin Session Duration Setting Save
                         adminSessionDuration: durationToSave,
-                        // --------------------------------------------------
+                        // --- AI Time Estimation Setting Save ---
+                        aiQueueTimeEnabled: aiQueueTimeEnabled,
+                        aiQueueTimeHistoryLimit: historyLimitToSave,
+                        // ----------------------------------------
                     }, { merge: true });
                     
                     // Save to local storage immediately for use by AdminLogin
@@ -1418,7 +1592,14 @@
                                             </button>
                                             <div className="text-center text-slate-400 text-sm">รออยู่ <span className="text-indigo-600 font-bold">{queues.filter(q => q.status === 'waiting').length}</span> คิว</div>
                                             
-                                            {/* FIXED: อนุญาตให้ดูประวัติได้แม้เปิดให้บริการ */}
+                                            {/* Estimated Time (Display Mode: Target first waiting queue) */}
+                                            {aiQueueTimeEnabled && estimatedTimeSeconds !== null && (
+                                                <div className="text-center text-sm text-green-600 font-bold bg-green-50 p-3 rounded-lg border border-green-100 animate-fade-in">
+                                                    <Icons.Time size={16} className="inline-block mr-1"/>
+                                                    คิวถัดไปคาดว่าจะใช้เวลา: {formatSecondsToMinutes(estimatedTimeSeconds)}
+                                                </div>
+                                            )}
+                                            
                                             {historyEnabled && (
                                                 <button type="button" onClick={() => setShowMyHistory(true)} className="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-indigo-600 mt-4 text-sm font-bold transition-colors">
                                                     <Icons.History size={16}/> ประวัติการจองของฉัน
@@ -1465,6 +1646,14 @@
                                             <><Icons.Volume size={20}/> ถึงคิวคุณแล้ว!</>
                                         )}
                                     </div>
+
+                                    {/* Estimated Time (Kiosk Mode: Target my queue) */}
+                                    {aiQueueTimeEnabled && myQueue.status === 'waiting' && estimatedTimeSeconds !== null && (
+                                        <div className="text-center text-sm text-green-600 font-bold bg-green-50 p-3 rounded-lg border border-green-100 animate-fade-in">
+                                            <Icons.Time size={16} className="inline-block mr-1"/>
+                                            คาดว่าคิวจะถึงใน: {formatSecondsToMinutes(estimatedTimeSeconds)}
+                                        </div>
+                                    )}
 
                                     <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-2 flex-shrink-0">
                                         <div className="flex justify-between items-end border-b border-slate-200 pb-2">
@@ -1746,6 +1935,14 @@
                                         <div className="text-2xl mt-4 text-indigo-200">ไม่มีคิวเรียก (รอคิวถัดไป)</div>
                                     </div>
                                 )}
+                                
+                                {/* Estimated Time for next queue (Display Mode: Target first waiting queue) */}
+                                {aiQueueTimeEnabled && !currentDisplayServing && estimatedTimeSeconds !== null && (
+                                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl text-center text-sm text-green-300 font-bold border border-white/30 animate-fade-in w-11/12 max-w-sm">
+                                        <Icons.Time size={16} className="inline-block mr-1 text-green-300"/>
+                                        คิวถัดไปคาดว่าจะใช้เวลา: {formatSecondsToMinutes(estimatedTimeSeconds)}
+                                    </div>
+                                )}
                             </div>
                             
                             {/* RIGHT COLUMN: WAITING QUEUES LIST */}
@@ -1964,7 +2161,8 @@
                                                     <button onClick={(e) => { e.preventDefault(); openSkipPopup(currentServing); }} className="flex items-center justify-center gap-1 bg-amber-100 text-amber-700 hover:bg-amber-200 px-3 py-2 rounded-xl font-bold text-sm active:scale-95 transition-all whitespace-nowrap"><Icons.Skip size={18}/> ข้าม</button>
                                                     <button onClick={() => updateStatus(currentServing.id, 'cancelled')} className="flex items-center justify-center gap-1 bg-white border border-red-200 text-red-500 hover:bg-red-50 px-3 py-2 rounded-xl font-bold text-sm active:scale-95 transition-all whitespace-nowrap"><Icons.Cross size={18}/> ยกเลิก</button>
                                                 </div>
-                                                <button onClick={() => updateStatus(currentServing.id, 'completed')} className="w-full flex items-center justify-center gap-2 bg-green-500 text-white px-4 py-2 rounded-xl font-bold text-lg shadow-lg shadow-green-200 hover:bg-green-600 active:scale-95 transition-all"><Icons.Check/> เสร็จสิ้น</button>
+                                                {/* Pass Date.now() when status changes to 'completed' */}
+                                                <button onClick={() => updateStatus(currentServing.id, 'completed', Date.now())} className="w-full flex items-center justify-center gap-2 bg-green-500 text-white px-4 py-2 rounded-xl font-bold text-lg shadow-lg shadow-green-200 hover:bg-green-600 active:scale-95 transition-all"><Icons.Check/> เสร็จสิ้น</button>
                                             </div>
                                         </div>
                                     ) : (
@@ -2053,7 +2251,7 @@
                                     )}
                                     {showScannedAction.queue.status === 'serving' && (
                                         <>
-                                            <button onClick={() => updateStatus(showScannedAction.queue.id, 'completed')} className="col-span-2 py-3 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600">เสร็จสิ้น</button>
+                                            <button onClick={() => updateStatus(showScannedAction.queue.id, 'completed', Date.now())} className="col-span-2 py-3 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600">เสร็จสิ้น</button>
                                             <button onClick={() => handleRecall(showScannedAction.queue.id)} className="py-3 bg-indigo-100 text-indigo-700 rounded-xl font-bold hover:bg-indigo-200">เรียกซ้ำ</button>
                                             <button onClick={() => openSkipPopup(showScannedAction.queue)} className="py-3 bg-amber-100 text-amber-700 rounded-xl font-bold hover:bg-amber-200">ข้าม</button>
                                         </>
@@ -2186,6 +2384,33 @@
                                         </p>
                                     </div>
                                     {/* --- END NEW: Admin Session Duration Setting Input --- */}
+
+                                    {/* --- NEW: AI Queue Time Estimation Setting (Request 3) --- */}
+                                    <div className="bg-green-50 rounded-2xl p-4 border border-green-100 space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-sm font-bold text-green-700 flex items-center gap-3">
+                                                <Icons.Time size={20} className="text-green-500"/> คาดการณ์เวลาคิว (AI Time)
+                                            </h3>
+                                            <ToggleSwitch checked={aiQueueTimeEnabled} onChange={() => setAiQueueTimeEnabled(!aiQueueTimeEnabled)} />
+                                        </div>
+                                        {aiQueueTimeEnabled && (
+                                            <div className="mt-4 space-y-3 border-t border-green-200 pt-4 animate-fade-in">
+                                                <div>
+                                                    <label className="block text-xs font-bold text-green-700 mb-1 ml-1">จำนวนคิวที่ใช้คำนวณย้อนหลัง (Limit)</label>
+                                                    <input 
+                                                        type="number" 
+                                                        min="3" 
+                                                        value={aiQueueTimeHistoryLimit} 
+                                                        onChange={e => setAiQueueTimeHistoryLimit(Math.max(3, parseInt(e.target.value) || 3))} 
+                                                        className="w-full border border-green-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500" 
+                                                        placeholder="5" 
+                                                    />
+                                                    <p className="text-[10px] text-green-600 mt-1">ใช้ประวัติ {aiQueueTimeHistoryLimit} คิวล่าสุดที่เสร็จสิ้นเพื่อหาค่าเฉลี่ยเวลาให้บริการ</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    {/* --- END NEW: AI Queue Time Estimation Setting --- */}
                                     
                                     <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                                         <span className="text-sm font-bold text-slate-700 flex items-center gap-3"><Icons.QrCode size={20} className="text-slate-400"/> ระบบ QR Code</span>

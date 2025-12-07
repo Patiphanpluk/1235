@@ -523,6 +523,9 @@
             const [showCloseReasonModal, setShowCloseReasonModal] = useState(false);
             const [tempClosedReason, setTempClosedReason] = useState('');
 
+            // NEW: External Link Error Modal
+            const [showExternalLinkError, setShowExternalLinkError] = useState(null); 
+
             // Auto Recall States
             const [showAutoRecallModal, setShowAutoRecallModal] = useState(false);
             const [autoRecallConfig, setAutoRecallConfig] = useState({ count: 3, interval: 10 });
@@ -676,7 +679,6 @@
                     if (!url.startsWith('http://') && !url.startsWith('https://')) {
                         finalUrl = 'https://' + url;
                     }
-                    console.log(`[Linker] Found URL: ${finalUrl}`);
                     window.open(finalUrl, '_blank');
                     if (isToastRequired) {
                         showToastFn(`เปิดลิ้งค์สำหรับคิว ${queueNumber} แล้ว`, 'success');
@@ -684,7 +686,11 @@
                 } else {
                     console.warn(`[Linker] No link found for Q: ${queueNumber}`);
                     if (isToastRequired) {
-                        showToastFn(`ไม่พบลิ้งค์สำหรับคิว ${queueNumber} (กรุณาตั้งค่า)`, 'error');
+                        // Show the custom error modal on the Kiosk/Client view
+                        setShowExternalLinkError({ queueNumber });
+                    } else {
+                        // Show a simple toast in Admin view
+                        showToastFn(`ไม่พบลิ้งค์สำหรับคิว ${queueNumber}`, 'error');
                     }
                 }
             };
@@ -843,7 +849,7 @@
 
                 const handleKeyDown = (e) => {
                     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
-                    if (showSkipPopup || showClearPopup || showConfirmPopup || showEditPopup || showScanner || showScannedAction || showRecallWait || showAutoRecallModal || showCloseReasonModal) return;
+                    if (showSkipPopup || showClearPopup || showConfirmPopup || showEditPopup || showScanner || showScannedAction || showRecallWait || showAutoRecallModal || showCloseReasonModal || showExternalLinkError) return;
 
                     if (e.key === 'ArrowRight') {
                         const currentServing = queues.find(q => q.status === 'serving');
@@ -865,7 +871,7 @@
 
                 window.addEventListener('keydown', handleKeyDown);
                 return () => window.removeEventListener('keydown', handleKeyDown);
-            }, [viewMode, isAdminAuthenticated, queues, showSkipPopup, showClearPopup, showConfirmPopup, showEditPopup, showScanner, showScannedAction, showRecallWait, showAutoRecallModal, showCloseReasonModal]);
+            }, [viewMode, isAdminAuthenticated, queues, showSkipPopup, showClearPopup, showConfirmPopup, showEditPopup, showScanner, showScannedAction, showRecallWait, showAutoRecallModal, showCloseReasonModal, showExternalLinkError]);
 
             // Recall Countdown Logic
             useEffect(() => {
@@ -1348,21 +1354,27 @@
                         await settingsRef.set({ savedNotes: [...savedNotes, noteToSave] }, { merge: true });
                     } catch(e) {}
                 }
+                
                 const currentSkipCount = queueToSkip.skipCount || 0;
                 let newCreatedAt = queueToSkip.createdAt;
-                const waitingList = queues.filter(q => q.status === 'waiting');
-                // The priority logic is: if skipped for the first time, insert after the oldest waiting queue. 
-                // If skipped multiple times, reset to the end of the queue.
+                const waitingList = queues.filter(q => q.status === 'waiting').sort((a, b) => a.createdAt - b.createdAt);
+                
+                // --- FIXED: ตรรกะการจัดลำดับคิวใหม่เมื่อข้าม ---
                 if (currentSkipCount === 0) { 
+                    // ข้ามครั้งแรก: จัดไปอยู่ลำดับที่ 2 (ใหม่กว่าคิวแรกที่รออยู่เล็กน้อย)
                     if (waitingList.length > 0) {
-                        // Find the oldest *waiting* queue and insert this one after it
+                        // ถ้ามีคิวรออยู่ (waitingList[0] คือคิวที่เก่าที่สุด/ลำดับที่ 1)
+                        // ให้จัดคิวที่ถูกข้ามไปอยู่ก่อนคิวที่ 1 เล็กน้อย (ทำให้มันกลายเป็นลำดับที่ 2)
                         newCreatedAt = waitingList[0].createdAt - 1; 
                     } else {
+                        // ถ้าไม่มีคิวรออยู่เลย ให้จัดเป็นคิวแรก
                         newCreatedAt = Date.now(); 
                     }
                 } else { 
+                    // ข้ามครั้งที่ 2 ขึ้นไป: จัดไปอยู่ลำดับสุดท้าย
                     newCreatedAt = Date.now(); 
                 }
+                // --- END FIXED ---
                 
                 try {
                     let docRef = (typeof __app_id !== 'undefined') ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('queues').doc(queueToSkip.id) : services.db.collection('queues').doc(queueToSkip.id);
@@ -1851,7 +1863,7 @@
                                         )}
                                     </div>
                                     
-                                    {/* Audio Enable Button (Small) - Hide when completed */}
+                                    /* Audio Enable Button (Small) - Hide when completed */
                                     {!audioEnabled && myQueue.status !== 'completed' && (
                                         <button onClick={handleEnableAudio} className="flex-shrink-0 flex items-center justify-center gap-2 w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-600 py-2 rounded-xl font-bold text-sm transition-colors border border-indigo-200">
                                             <Icons.Speaker size={16}/> 🔔 เปิดเสียงแจ้งเตือน
@@ -1975,7 +1987,7 @@
                             </div>
                         )}
 
-                        /* QR Modal Overlay */
+                        {/* QR Modal Overlay */}
                         {showMyQR && (
                             <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
                                  <div className="bg-white p-6 rounded-2xl w-full max-w-sm relative text-center shadow-2xl">
@@ -1986,6 +1998,23 @@
                                          <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${myQueue.id}`} alt="QR Code" className="w-48 h-48 mix-blend-multiply mx-auto" />
                                      </div>
                                      <button onClick={() => setShowMyQR(false)} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700">ปิดหน้าต่าง</button>
+                                 </div>
+                            </div>
+                        )}
+                        
+                        {/* External Link Error Modal (Kiosk Mode) */}
+                        {showExternalLinkError && (
+                            <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+                                 <div className="bg-white rounded-2xl p-8 w-full max-w-xs text-center shadow-2xl border-t-4 border-red-500">
+                                     <div className="flex justify-center mb-4 text-red-500"><Icons.Alert size={40}/></div>
+                                     {/* FIXED: ใช้ข้อความตามที่ลูกค้าร้องขอ */}
+                                     <h3 className="text-xl font-bold text-slate-800">
+                                         ไม่พบลิ้งค์สำหรับคิว {showExternalLinkError.queueNumber}
+                                     </h3>
+                                     <p className="text-sm text-slate-600 mt-2">
+                                         (กรุณาติดผู้ให้บริการ)
+                                     </p>
+                                     <button onClick={() => setShowExternalLinkError(null)} className="w-full mt-6 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700">ปิด</button>
                                  </div>
                             </div>
                         )}
@@ -2270,8 +2299,8 @@
 
                     <div className="bg-white border-b border-slate-200 sticky top-0 z-50 px-2 py-2 sm:px-4 sm:py-3 shadow-sm">
                         <div className="max-w-7xl mx-auto flex justify-between items-center gap-2">
-                            {/* FIXED: เพิ่ม flex-wrap และ flex-row เพื่อให้จัดเรียงได้บนมือถือ */}
-                            <div className="flex items-center gap-2 font-bold text-xl text-indigo-900 flex-shrink-0 flex-grow min-w-0">
+                            {/* FIXED: ปรับ div หลักให้ยืดหยุ่นบนมือถือ */}
+                            <div className="flex items-center gap-2 font-bold text-xl text-indigo-900 flex-grow min-w-0">
                                 <div className="bg-indigo-600 text-white w-8 h-8 rounded flex items-center justify-center flex-shrink-0">Q</div>
                                 <span className="hidden md:inline flex-shrink-0">Q-Master Admin</span>
                                 

@@ -1,6 +1,3 @@
-{
-type: file
-content:
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -83,29 +80,14 @@ content:
 
         const initFirebase = () => {
             let config;
-            let setupError = false;
-            let errorMessage = '';
-
             if (YOUR_FIREBASE_CONFIG.apiKey === "วาง_API_KEY_ที่นี่" || YOUR_FIREBASE_CONFIG.apiKey === "") {
                  if (typeof __firebase_config !== 'undefined') {
-                    // Use environment config if available
-                    try {
-                        config = JSON.parse(__firebase_config);
-                    } catch (e) {
-                        setupError = true;
-                        errorMessage = "Invalid __firebase_config format.";
-                    }
+                    config = JSON.parse(__firebase_config);
                  } else {
-                    setupError = true;
-                    errorMessage = "Firebase API Key is missing and environment config is unavailable.";
+                    throw new Error("PLEASE_SETUP_FIREBASE");
                  }
             } else {
                 config = YOUR_FIREBASE_CONFIG;
-            }
-
-            if (setupError) {
-                // Return error state instead of throwing an unhandled error
-                return { setupError: true, errorMessage };
             }
 
             if (!firebase.apps.length) {
@@ -113,8 +95,7 @@ content:
                     firebase.initializeApp(config);
                 } catch (e) {
                     console.error("Firebase init failed", e);
-                    // Handle init failure, which might happen if config is bad
-                    return { setupError: true, errorMessage: "Firebase initialization failed: " + e.message };
+                    throw e;
                 }
             }
             return {
@@ -562,10 +543,10 @@ content:
             // QR Code Dynamic Token States (NEW)
             const [qrToken, setQrToken] = useState(() => localStorage.getItem('qr_token') || crypto.randomUUID());
             const [qrExpireEnabled, setQrExpireEnabled] = useState(false);
-            // FIXED: Initial state can be 0 (infinite)
-            const [qrExpireTime, setQrExpireTime] = useState(5); // Minutes
-            const [qrTokenExpiry, setQrTokenExpiry] = useState(null);
-            const [qrCountdown, setQrCountdown] = useState(0);
+            const [qrExpireTime, setQrExpireTime] = useState(5); // Minutes (0 means infinite)
+            const [qrTokenExpiry, setQrTokenExpiry] = useState(null); // Milliseconds timestamp or null
+            const [qrCountdown, setQrCountdown] = useState(0); // Seconds
+
             
             // --- NEW: Time estimation for specific queues (to track countdown on display/kiosk) ---
             const [etaMap, setEtaMap] = useState({}); // {queueId: seconds_remaining}
@@ -600,25 +581,36 @@ content:
             };
 
             // Helper function to update the QR token and expiry in Firestore
-            // MODIFIED: Logic handles expiryMinutes = 0 as infinite (null expiry time)
             const updateQrTokenInFirestore = async (newQrToken, expiryMinutes, isManual = false) => {
                 if (!services?.db || !user) return;
                 
-                const now = Date.now();
-                // If expiryMinutes is 0, set tokenExpiry to null (infinite)
-                const tokenExpiry = expiryMinutes > 0 ? now + (expiryMinutes * 60 * 1000) : null;
+                // --- แก้ไขตรรกะ QR Code Expiration ---
+                const finalExpiryMinutes = parseInt(expiryMinutes) > 0 ? parseInt(expiryMinutes) : 0;
+                
+                let tokenExpiry = null;
+                // ถ้าค่ามากกว่า 0 (หรือถูกเปิดใช้งาน) -> กำหนดเวลาหมดอายุ
+                if (finalExpiryMinutes > 0) {
+                    const now = Date.now();
+                    tokenExpiry = now + (finalExpiryMinutes * 60 * 1000);
+                } 
+                // ถ้าค่าเป็น 0 หรือไม่ถูกต้อง -> tokenExpiry จะเป็น null (Infinite Expiration)
+                // --- สิ้นสุดการแก้ไขตรรกะ QR Code Expiration ---
+
 
                 try {
                     let settingsRef = (typeof __app_id !== 'undefined') ? services.db.collection('artifacts').doc(appId).collection('public').doc('data').collection('settings').doc('main') : services.db.collection('settings').doc('main');
                     await settingsRef.set({ 
                         qrToken: newQrToken, 
                         qrTokenExpiry: tokenExpiry,
-                        qrExpireTime: expiryMinutes, // Save the interval setting
+                        qrExpireTime: finalExpiryMinutes, // Save the interval setting
                     }, { merge: true });
                     
                     setQrToken(newQrToken);
                     setQrTokenExpiry(tokenExpiry);
+                    // Update local state for immediate use
+                    setQrExpireTime(finalExpiryMinutes);
                     localStorage.setItem('qr_token', newQrToken);
+
                     if(isManual) showToastFn("อัปเดต QR Code ใหม่เรียบร้อย", 'success');
 
                 } catch (err) {
@@ -761,9 +753,10 @@ content:
 
                         // Only update state if mapping has changed 
                         setExternalLinkMapping(prev => {
+                            // Note: isManualSync check was previously misused here. It's meant to toast, not control logic.
                             if (prev !== mappingString && isManualSync) {
                                 // Log silent update, but don't toast
-                                console.log("GAS mapping silently updated.");
+                                console.log("GAS mapping updated during manual sync.");
                             }
                             return mappingString;
                         });
@@ -843,7 +836,7 @@ content:
             // --- Handle Audio Enable ---
             const handleEnableAudio = () => {
                 initGlobalAudio();
-                const silentAudio = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTSVAAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////wAAAAD/84QAAAAAExAAAAAAAAABAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA";
+                const silentAudio = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTSVAAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////wAAAAD/84QAAAAAExAAAAAAAAABAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA";
                 const audio = new Audio(silentAudio);
                 
                 audio.play().then(() => { 
@@ -933,38 +926,27 @@ content:
             }, [showScanner, queues]);
 
             useEffect(() => {
-                // MODIFIED: Check for setupError before continuing
-                const firebaseResult = initFirebase();
-
-                if (firebaseResult.setupError) {
-                    setErrorMsg(firebaseResult.errorMessage);
-                    setConfigError(true);
-                    setLoading(false);
-                    return; // Stop initialization process
-                }
-
-                const { auth, db } = firebaseResult;
-                setServices({ auth, db });
-                
-                const unsubAuth = auth.onAuthStateChanged(async (u) => {
-                    if (u) { setUser(u); } else {
-                        try {
-                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                                try { await auth.signInWithCustomToken(__initial_auth_token); } catch { await auth.signInAnonymously(); }
-                            } else { await auth.signInAnonymously(); }
-                        } catch (authErr) { setErrorMsg("Auth Error: " + authErr.message); setConfigError(true); setLoading(false); }
-                    }
-                });
-                const params = new URLSearchParams(window.location.search);
-                const mode = params.get('mode');
-                if (mode === 'kiosk') setViewMode('kiosk');
-                if (mode === 'display') setViewMode('display');
-                // NEW: Add QR-only mode
-                if (mode === 'qr-only') setViewMode('qr-only');
-                return () => unsubAuth();
-
-            }, []); // Empty dependency array ensures this runs only once
-
+                try {
+                    const { auth, db } = initFirebase();
+                    setServices({ auth, db });
+                    const unsubAuth = auth.onAuthStateChanged(async (u) => {
+                        if (u) { setUser(u); } else {
+                            try {
+                                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                                    try { await auth.signInWithCustomToken(__initial_auth_token); } catch { await auth.signInAnonymously(); }
+                                } else { await auth.signInAnonymously(); }
+                            } catch (authErr) { setErrorMsg("Auth Error: " + authErr.message); setConfigError(true); setLoading(false); }
+                        }
+                    });
+                    const params = new URLSearchParams(window.location.search);
+                    const mode = params.get('mode');
+                    if (mode === 'kiosk') setViewMode('kiosk');
+                    if (mode === 'display') setViewMode('display');
+                    // NEW: Add QR-only mode
+                    if (mode === 'qr-only') setViewMode('qr-only');
+                    return () => unsubAuth();
+                } catch (err) { setErrorMsg(err.message); setConfigError(true); setLoading(false); }
+            }, []);
 
             useEffect(() => { if (showSkipPopup && skipInputRef.current) setTimeout(() => skipInputRef.current?.focus({ preventScroll: true }), 50); }, [showSkipPopup]);
             useEffect(() => { if (showClearPopup) { setClearPassword(''); setTimeout(() => clearInputRef.current?.focus({ preventScroll: true }), 50); } }, [showClearPopup]);
@@ -1013,8 +995,11 @@ content:
                         
                         // QR Settings (NEW)
                         if (data.qrExpireEnabled !== undefined) setQrExpireEnabled(data.qrExpireEnabled);
-                        // MODIFIED: Load value as is, including 0
-                        if (data.qrExpireTime !== undefined) setQrExpireTime(data.qrExpireTime); 
+                        // *** FIX: Ensure qrExpireTime is treated as a number, allowing 0 ***
+                        if (data.qrExpireTime !== undefined) {
+                            const time = parseInt(data.qrExpireTime);
+                            setQrExpireTime(isNaN(time) ? 0 : time); 
+                        }
                         if (data.qrToken) setQrToken(data.qrToken);
                         if (data.qrTokenExpiry !== undefined) setQrTokenExpiry(data.qrTokenExpiry);
                         
@@ -1049,7 +1034,7 @@ content:
                     // 1. Calculate the base average service time once
                     const completedQueues = queues
                         .filter(q => q.status === 'completed' && q.calledAt && q.completedAt && typeof q.durationMs === 'number' && q.durationMs > 0)
-                        .sort((a, b) => b.completedAt - a.createdAt); 
+                        .sort((a, b) => b.completedAt - a.completedAt); 
 
                     let totalServiceTime = 0;
                     const limit = aiQueueTimeHistoryLimit || 5;
@@ -1145,54 +1130,50 @@ content:
             // --- QR Code Auto-Update Logic (Display Mode/Admin Mode) ---
             useEffect(() => {
                 let interval = null;
-                const expiryMinutes = Number(qrExpireTime);
-
+                
+                // Check if expiration is actually enabled (expire time > 0)
+                const isQrExpirationActive = qrExpireEnabled && qrExpireTime > 0;
+                
                 const updateToken = () => {
-                    // Condition 1: Expiration is enabled AND time is NOT infinite (expiryMinutes > 0)
-                    if (services && user && qrExpireEnabled && expiryMinutes > 0) {
+                    if (services && user && isQrExpirationActive) {
                         const now = Date.now();
                         const expiry = qrTokenExpiry || 0;
-                        const expiryMs = expiryMinutes * 60 * 1000;
-                        // Use expiryMs here to calculate the time passed since the token was created
-                        const timeSinceLastUpdate = now - (expiry - expiryMs); 
+                        const expiryMs = qrExpireTime * 60 * 1000;
                         
-                        // If expired or time since last update exceeds the interval, generate new token
+                        // Calculate time elapsed since the calculated start time (expiry - expiryMs)
+                        const timeSinceLastUpdate = now - (expiry - expiryMs);
+                        
+                        // If expired (expiry <= now) or approaching the refresh time (e.g., within a tolerance, or just check elapsed time)
+                        // Note: The logic `timeSinceLastUpdate >= expiryMs` effectively checks if a full interval has passed since the token *should* have been created/refreshed.
                         if (!qrTokenExpiry || expiry <= now || timeSinceLastUpdate >= expiryMs) {
                             const newToken = generateUniqueToken();
-                            console.log(`[QR] Generating new expiring token: ${newToken}`);
-                            updateQrTokenInFirestore(newToken, expiryMinutes);
+                            console.log(`Generating new QR token: ${newToken}`);
+                            updateQrTokenInFirestore(newToken, qrExpireTime);
                         }
-                    } 
-                    // Condition 2: Expiration is enabled AND time IS infinite (expiryMinutes = 0) 
-                    // AND token is missing. Generate a permanent token once.
-                    else if (services && user && qrExpireEnabled && expiryMinutes === 0 && !qrToken) {
-                         const newToken = generateUniqueToken();
-                         console.log(`[QR] Generating new infinite token: ${newToken}`);
-                         updateQrTokenInFirestore(newToken, 0); // Send 0 to set expiry to null
                     }
                 };
 
                 // Update countdown every second
                 interval = setInterval(() => {
-                    // Condition: Only count down if expiration is enabled AND time is NOT infinite (expiryMinutes > 0)
-                    if (qrExpireEnabled && qrTokenExpiry && expiryMinutes > 0) {
+                    if (isQrExpirationActive && qrTokenExpiry) {
                         const now = Date.now();
                         const remaining = qrTokenExpiry - now;
                         setQrCountdown(Math.max(0, Math.floor(remaining / 1000)));
 
                         if (remaining <= 0) {
-                             updateToken(); // Generate new token when countdown hits zero
+                             updateToken(); // Generate new token when countdown hits zero or time passes
                         }
                     } else {
-                        setQrCountdown(0);
+                        // If expiration is disabled or infinite (qrExpireTime <= 0), countdown is 0
+                        setQrCountdown(0); 
                     }
                 }, 1000);
 
-                // Run once on mount to check if token needs refresh/generation
+                // Run once on mount to check if token needs refresh
                 updateToken();
 
                 return () => clearInterval(interval);
-            }, [services, user, qrExpireEnabled, Number(qrExpireTime), qrTokenExpiry]);
+            }, [services, user, qrExpireEnabled, qrExpireTime, qrTokenExpiry]);
             
             const formatCountdown = (seconds) => {
                 const totalSeconds = Math.max(0, Math.floor(seconds));
@@ -1231,16 +1212,13 @@ content:
 
                             // Only update state if mapping has changed 
                             setExternalLinkMapping(prev => {
-                                // isManualSync is not available here, so we skip the silent update logging
-                                if (prev !== mappingString) {
-                                    // console.log("GAS mapping silently updated.");
-                                }
+                                // Log silent update, but don't toast
+                                console.log("GAS mapping silently updated.");
                                 return mappingString;
                             });
                             
                             setLastGasSyncTime(currentTime); // Update sync time
 
-                            // No Firestore save in silent sync
                         } else {
                             console.warn("GAS data format invalid for silent sync.");
                         }
@@ -1296,8 +1274,10 @@ content:
                 const params = new URLSearchParams(window.location.search);
                 const kioskToken = params.get('queue_token');
                 
-                // Check if QR Expiration is enabled AND not set to infinite (qrExpireTime > 0)
-                if (qrExpireEnabled && Number(qrExpireTime) > 0) {
+                // Check if QR Expiration is active (qrExpireEnabled && qrExpireTime > 0)
+                const isQrExpirationActive = qrExpireEnabled && qrExpireTime > 0;
+                
+                if (isQrExpirationActive) {
                      // Check if token is present, if it matches the current token, and if it has not expired
                      if (!kioskToken || kioskToken !== qrToken || (qrTokenExpiry && Date.now() > qrTokenExpiry)) {
                          showToastFn("QR Code หมดอายุแล้ว กรุณาสแกนใหม่", 'error');
@@ -1305,6 +1285,7 @@ content:
                          return;
                      }
                 }
+                // If expiration is not active, the token check is skipped, allowing booking.
                 
                 setIsSubmitting(true);
                 await requestWakeLock();
@@ -1620,15 +1601,26 @@ content:
             const handleSaveSettings = async () => {
                 if (!user || !services) return;
                 
-                // MODIFIED: Handle 0 or empty string as 0 (Infinite)
-                const expiryTimeToSave = Number(qrExpireTime) || 0;
-
-                // If QR expiration is enabled, ensure token is generated and saved if missing
-                if (qrExpireEnabled && !qrToken) {
-                    const newToken = generateUniqueToken();
-                    // Pass the newly calculated expiryTimeToSave (0 for infinite)
-                    await updateQrTokenInFirestore(newToken, expiryTimeToSave);
+                // --- แก้ไขตรรกะ QR Code Expiration ---
+                const finalQrExpireTime = parseInt(qrExpireTime) > 0 ? parseInt(qrExpireTime) : 0;
+                
+                // ถ้า QR expiration ถูกเปิดใช้งาน และไม่มีโทเค็น (หรือหมดอายุแบบ Infinite ถูกปิด แต่เวลามีน้อยกว่า 1)
+                if (qrEnabled && (qrExpireEnabled && finalQrExpireTime > 0)) {
+                    // Force refresh token if needed only when active and finite
+                    if (!qrToken || (qrTokenExpiry && Date.now() > qrTokenExpiry)) {
+                        const newToken = generateUniqueToken();
+                        await updateQrTokenInFirestore(newToken, finalQrExpireTime); // This updates token and expiry in Firestore and state
+                    }
+                } else if (qrEnabled && (!qrExpireEnabled || finalQrExpireTime === 0)) {
+                     // If QR is enabled but expiration is infinite (0) or disabled, ensure a token exists (but don't force expiry check)
+                     if (!qrToken) {
+                         const newToken = generateUniqueToken();
+                         await updateQrTokenInFirestore(newToken, 0); // Saves token with null expiry
+                     }
                 }
+                // --- สิ้นสุดการแก้ไขตรรกะ QR Code Expiration ---
+
+
                 
                 const durationToSave = parseInt(adminSessionDuration) > 0 ? parseInt(adminSessionDuration) : 60;
                 const historyLimitToSave = parseInt(aiQueueTimeHistoryLimit) > 0 ? parseInt(aiQueueTimeHistoryLimit) : 5;
@@ -1650,8 +1642,7 @@ content:
                         lastSentLink: lastSentLink, // NEW: Save last successful sent link for persistence
                         // QR Settings (NEW)
                         qrExpireEnabled: qrExpireEnabled,
-                        // MODIFIED HERE: Save 0 for infinite, >0 for expiration
-                        qrExpireTime: expiryTimeToSave, 
+                        qrExpireTime: finalQrExpireTime, // Use the cleaned value (0 or > 0)
                         // Admin Session Duration Setting Save
                         adminSessionDuration: durationToSave,
                         // --- AI Time Estimation Setting Save ---
@@ -1672,8 +1663,8 @@ content:
                 const url = new URL(window.location.href); 
                 url.searchParams.set('mode', 'kiosk'); 
                 
-                // MODIFIED: Only add token if expiration is enabled AND time is NOT infinite (qrExpireTime > 0)
-                if(qrExpireEnabled && qrToken && Number(qrExpireTime) > 0) {
+                // Add token if QR is enabled
+                if(qrEnabled && qrToken) {
                     url.searchParams.set('queue_token', qrToken);
                 } else {
                     url.searchParams.delete('queue_token');
@@ -1686,8 +1677,8 @@ content:
                 const url = new URL(window.location.href); 
                 url.searchParams.set('mode', 'qr-only'); 
                 
-                // MODIFIED: Only add token if expiration is enabled AND time is NOT infinite (qrExpireTime > 0)
-                if(qrExpireEnabled && qrToken && Number(qrExpireTime) > 0) {
+                // Add token if QR is enabled
+                if(qrEnabled && qrToken) {
                     url.searchParams.set('queue_token', qrToken);
                 } else {
                     url.searchParams.delete('queue_token');
@@ -1761,11 +1752,10 @@ content:
             const kioskUrl = new URL(window.location.href);
             kioskUrl.search = '';
             kioskUrl.searchParams.set('mode', 'kiosk');
-            // MODIFIED: Only add token if expiration is enabled AND time is NOT infinite (qrExpireTime > 0)
-            if(qrExpireEnabled && qrToken && Number(qrExpireTime) > 0) {
+            
+            // Add token if QR is enabled
+            if(qrEnabled && qrToken) {
                  kioskUrl.searchParams.set('queue_token', qrToken);
-            } else {
-                 kioskUrl.searchParams.delete('queue_token');
             }
             // The URL used for the QR code image generation
             const qrCodeData = kioskUrl.toString(); 
@@ -1774,6 +1764,9 @@ content:
             // NEW: QR-ONLY MODE LOGIC (FOR EMBEDDING)
             // ===============================================
             if (viewMode === 'qr-only') {
+                // Check if expiration is active
+                const isQrExpirationActive = qrExpireEnabled && qrExpireTime > 0;
+                
                  // The main container must be transparent to allow embedding with minimal fuss
                  return (
                     // Use min-h-screen and bg-transparent
@@ -1796,12 +1789,14 @@ content:
                             
                             <p className="text-lg font-medium text-slate-800 mb-1">คิวปัจจุบัน: <span className="font-bold text-indigo-600">{currentServing ? currentServing.number : '--'}</span></p>
                             
-                            {/* MODIFIED: แสดงสถานะการหมดอายุตามที่ตั้งค่า (Request 2) */}
-                            {qrEnabled && qrExpireEnabled && Number(qrExpireTime) > 0 && qrTokenExpiry ? (
-                                <div className="text-sm font-bold text-red-500 mt-2 flex items-center justify-center">
+                            {/* FIXED: แสดงสถานะการหมดอายุตามที่ตั้งค่า */}
+                            {qrEnabled && isQrExpirationActive ? (
+                                <div className="text-sm font-bold text-red-500 mt-2 flex items-center justify-center animate-pulse">
                                     <Icons.Clock size={16} className="inline-block mr-1"/> QR Code เปลี่ยนใหม่ใน: {formatCountdown(qrCountdown)}
                                 </div>
-                            ) : (qrEnabled && <div className="text-sm text-slate-500 mt-2">QR Code ไม่หมดอายุ (คงที่)</div>)}
+                            ) : (qrEnabled && (
+                                <div className="text-sm text-slate-500 mt-2">QR Code ไม่หมดอายุ (คงที่)</div>
+                            ))}
                             
                             <div className="text-xs text-slate-400 mt-4">Powered by Q-Master System</div>
 
@@ -2163,7 +2158,8 @@ content:
                 .sort((a, b) => a.createdAt - b.createdAt)
                 .slice(0, 7); 
             
-            // Note: qrCodeData generation is now global (line ~1104)
+            // Note: qrCodeData generation is now global (line ~1088)
+            const isQrExpirationActive = qrExpireEnabled && qrExpireTime > 0;
 
             if (viewMode === 'display') {
                 
@@ -2336,8 +2332,8 @@ content:
                                                 key={qrToken} // Re-render image when token changes, even if expiration is off
                                             />
                                             
-                                            {/* MODIFIED: แสดงสถานะการหมดอายุ (Request 2) */}
-                                            {qrEnabled && qrExpireEnabled && Number(qrExpireTime) > 0 && qrTokenExpiry && (
+                                            {/* NEW: แสดงสถานะการหมดอายุ (ตามโจทย์: แสดงเฉพาะเมื่อเปิดใช้งานและมีค่า > 0) */}
+                                            {qrEnabled && isQrExpirationActive && (
                                                 <div className="text-[10px] text-red-600 mt-1 font-mono font-bold flex items-center justify-center animate-pulse">
                                                     <Icons.Clock size={10} className="inline-block mr-0.5"/> หมดอายุใน: {formatCountdown(qrCountdown)}
                                                 </div>
@@ -2768,52 +2764,52 @@ content:
                                         {qrExpireEnabled && (
                                             <div className="mt-4 space-y-3 border-t border-slate-200 pt-4 animate-fade-in">
                                                 <div>
-                                                    {/* MODIFIED: Label text change (Request 3) */}
+                                                    {/* FIXED: ลบข้อความ (0 คือไม่หมดอายุ) และแก้ไข onChange เพื่อให้สามารถลบค่าทั้งหมดได้ */}
                                                     <label className="block text-xs font-bold text-slate-500 mb-1 ml-1">เปลี่ยน QR Code ทุก (นาที)</label>
                                                     <input 
                                                         type="number" 
-                                                        min="0" 
-                                                        // MODIFIED: Allows empty string (Request 4)
-                                                        value={qrExpireTime} 
+                                                        min="0" // อนุญาตค่า 0
+                                                        // ใช้ String() เพื่อจัดการค่าว่างได้
+                                                        value={String(qrExpireTime)} 
                                                         onChange={e => {
-                                                            const val = e.target.value;
-                                                            if (val === "") {
-                                                                setQrExpireTime(""); // Allow empty string
+                                                            const value = e.target.value;
+                                                            // ถ้าเป็นค่าว่าง ให้ตั้งเป็น 0
+                                                            if (value === "") {
+                                                                setQrExpireTime(0); 
                                                             } else {
-                                                                const num = parseInt(val, 10);
-                                                                // Ensure minimum is 0
-                                                                setQrExpireTime(Math.max(0, isNaN(num) ? 0 : num)); 
+                                                                // ถ้าเป็นตัวเลข ให้ตั้งค่า แต่ไม่ให้ต่ำกว่า 0
+                                                                setQrExpireTime(Math.max(0, parseInt(value) || 0));
                                                             }
                                                         }} 
                                                         className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500" 
-                                                        placeholder="0 คือไม่หมดอายุ" 
+                                                        placeholder="5" 
                                                     />
-                                                     <p className="text-[10px] text-slate-400 mt-1">
-                                                        ใส่ 0 (ศูนย์) หรือเว้นว่างไว้สำหรับ "ไม่หมดอายุ" (Infinite Expiration)
+                                                    <p className="text-[10px] text-slate-500 mt-1">
+                                                        ใส่ค่า 0 (ศูนย์) เพื่อให้ QR Code ไม่หมดอายุ (Infinite Expiration)
                                                     </p>
                                                 </div>
                                                 <button 
-                                                    onClick={() => updateQrTokenInFirestore(generateUniqueToken(), Number(qrExpireTime) || 0, true)} 
+                                                    // ใช้ finalQrExpireTime ในการเรียกฟังก์ชัน
+                                                    onClick={() => updateQrTokenInFirestore(generateUniqueToken(), qrExpireTime, true)} 
                                                     className="w-full py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors text-sm flex items-center justify-center gap-2" // Added flex items-center justify-center gap-2
                                                 >
                                                     สร้าง QR Code ใหม่ทันที
-                                                    {/* NEW: Countdown in Settings Button */}
+                                                    {/* NEW: Countdown in Settings Button: แสดงเฉพาะเมื่อหมดอายุ > 0 */}
                                                     {qrCountdown > 0 && (
                                                         <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full ml-1">
                                                             {formatCountdown(qrCountdown)}
                                                         </span>
                                                     )}
                                                 </button>
-                                                {/* MODIFIED: Check Number(qrExpireTime) > 0 for display (Request 2) */}
-                                                {qrEnabled && qrTokenExpiry && Number(qrExpireTime) > 0 && (
+                                                {qrEnabled && qrTokenExpiry && qrExpireTime > 0 && (
                                                      <div className="text-xs text-slate-500 text-center">
                                                          QR Code จะหมดอายุใน: {formatCountdown(qrCountdown)}
                                                      </div>
                                                 )}
-                                                {/* MODIFIED: Show infinite status */}
-                                                {qrEnabled && Number(qrExpireTime) === 0 && (
-                                                     <div className="text-xs text-green-500 text-center font-bold">
-                                                         QR Code ถูกตั้งค่าเป็น "ไม่หมดอายุ" (Infinite)
+                                                {/* แสดงสถานะไม่หมดอายุ */}
+                                                {qrEnabled && qrExpireTime === 0 && (
+                                                     <div className="text-xs text-green-600 text-center font-bold">
+                                                         QR Code นี้ไม่มีวันหมดอายุ
                                                      </div>
                                                 )}
                                             </div>
@@ -3215,4 +3211,3 @@ content:
     </script>
 </body>
 </html>
-}

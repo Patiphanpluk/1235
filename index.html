@@ -1816,10 +1816,15 @@
                                             <div className="text-center text-slate-400 text-sm">รออยู่ <span className="text-indigo-600 font-bold">{queues.filter(q => q.status === 'waiting').length}</span> คิว</div>
                                             
                                             {/* Estimated Time (Kiosk Mode: Target first waiting queue - BEFORE booking) */}
-                                            {aiQueueTimeEnabled && waitingQueues.length > 0 && etaMap[waitingQueues[0].id] !== undefined && (
+                                            {/* FIXED: ปรับปรุงการแสดงผล ETA สำหรับคิวก่อนจอง */}
+                                            {aiQueueTimeEnabled && waitingQueues.length > 0 && (
                                                 <div className="text-center text-sm text-green-600 font-bold bg-green-50 p-3 rounded-lg border border-green-100 animate-fade-in">
                                                     <Icons.Time size={16} className="inline-block mr-1"/>
-                                                    คิวถัดไปคาดว่าจะใช้เวลา: {formatSecondsToMinutes(etaMap[waitingQueues[0].id])}
+                                                    คิวถัดไปคาดว่าจะใช้เวลา: {
+                                                        etaMap[waitingQueues[0].id] !== undefined && etaMap[waitingQueues[0].id] !== null && etaMap[waitingQueues[0].id] > 0
+                                                            ? formatSecondsToMinutes(etaMap[waitingQueues[0].id])
+                                                            : (queues.filter(q => q.status === 'completed').length < 3 ? 'กำลังเรียนรู้เวลาเฉลี่ย...' : '--')
+                                                    }
                                                 </div>
                                             )}
                                             
@@ -1871,10 +1876,15 @@
                                     </div>
 
                                     {/* Estimated Time (Kiosk Mode: Target my queue) */}
-                                    {aiQueueTimeEnabled && myQueue.status === 'waiting' && myEtaSeconds !== null && (
+                                    {/* FIXED: ปรับปรุงการแสดงผล ETA สำหรับคิวที่ถูกจองแล้ว */}
+                                    {aiQueueTimeEnabled && myQueue.status === 'waiting' && (
                                         <div className="text-center text-sm text-green-600 font-bold bg-green-50 p-3 rounded-lg border border-green-100 animate-fade-in">
                                             <Icons.Time size={16} className="inline-block mr-1"/>
-                                            คาดว่าคิวจะถึงใน: {formatSecondsToMinutes(myEtaSeconds)}
+                                            คาดว่าคิวจะถึงใน: {
+                                                myEtaSeconds !== null && myEtaSeconds !== undefined && myEtaSeconds > 0
+                                                    ? formatSecondsToMinutes(myEtaSeconds)
+                                                    : (queues.filter(q => q.status === 'completed').length < 3 ? 'กำลังเรียนรู้เวลาเฉลี่ย...' : '--')
+                                            }
                                         </div>
                                     )}
 
@@ -2232,13 +2242,15 @@
                                                     <div className="text-2xl font-black text-indigo-300 whitespace-nowrap">{q.number}</div>
                                                     
                                                     {/* NEW: Estimated Time per queue */}
-                                                    {showEta ? (
+                                                    {/* FIXED: ปรับปรุงการแสดงผล ETA */}
+                                                    {aiQueueTimeEnabled && (
                                                         <div className="text-sm text-green-400 font-bold flex items-center">
                                                             <Icons.Time size={14} className="mr-1"/> 
-                                                            {formatSecondsToMinutes(etaSeconds)}
+                                                            {showEta 
+                                                                ? formatSecondsToMinutes(etaSeconds)
+                                                                : (queues.filter(q => q.status === 'completed').length < 3 ? 'กำลังคำนวณ...' : '--')
+                                                            }
                                                         </div>
-                                                    ) : (
-                                                        <div className="text-sm text-slate-500">{index + 1} คิวถัดไป</div>
                                                     )}
                                                 </div>
                                                 

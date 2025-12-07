@@ -315,6 +315,8 @@
             const totalSeconds = Math.max(0, Math.floor(seconds));
             const min = Math.floor(totalSeconds / 60);
             const sec = totalSeconds % 60;
+            // FIXED: เปลี่ยนการแสดงผล ETA ให้เป็น -- นาที -- วินาที ถ้าค่าเป็น 0 หรือ null/undefined
+            if (!seconds || totalSeconds === 0) return `-- นาที -- วินาที`;
             return `${String(min).padStart(2, '0')} นาที ${String(sec).padStart(2, '0')} วินาที`;
         };
         
@@ -849,9 +851,7 @@
                     console.error("GAS Write Error:", error);
                     return false;
                 } finally {
-                    setIsGasSending(false);
-                    // REMOVED: Reset success state after a short delay to keep the status persistent
-                    // setTimeout(() => setSendSuccess(false), 1500); 
+                    setIsGasSending(false); 
                 }
             };
 
@@ -1825,7 +1825,7 @@
                                                     คิวถัดไปคาดว่าจะใช้เวลา: {
                                                         etaMap[waitingQueues[0].id] !== undefined && etaMap[waitingQueues[0].id] !== null && etaMap[waitingQueues[0].id] > 0
                                                             ? formatSecondsToMinutes(etaMap[waitingQueues[0].id])
-                                                            : (hasSufficientData ? '--' : 'กำลังเรียนรู้เวลาเฉลี่ย...')
+                                                            : formatSecondsToMinutes(0)
                                                     }
                                                 </div>
                                             )}
@@ -1885,7 +1885,7 @@
                                             คาดว่าคิวจะถึงใน: {
                                                 myEtaSeconds !== null && myEtaSeconds !== undefined && myEtaSeconds > 0
                                                     ? formatSecondsToMinutes(myEtaSeconds)
-                                                    : (hasSufficientData ? '--' : 'กำลังเรียนรู้เวลาเฉลี่ย...')
+                                                    : formatSecondsToMinutes(0)
                                             }
                                         </div>
                                     )}
@@ -2251,7 +2251,7 @@
                                                             <Icons.Time size={14} className="mr-1"/> 
                                                             {showEta 
                                                                 ? formatSecondsToMinutes(etaSeconds)
-                                                                : (hasSufficientData ? '--' : 'กำลังคำนวณ...')
+                                                                : formatSecondsToMinutes(0)
                                                             }
                                                         </div>
                                                     )}

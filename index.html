@@ -108,11 +108,12 @@
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d={d}/></svg>
         );
         
-        // --- FIXED: Refactoring Icons to be self-contained SVG or simple Icon calls ---
         const Icons = {
             User: (p) => <Icon d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2 M12 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8" {...p} />,
+            // แก้ไข Icons.Monitor เพื่อให้ใส่ overflow-visible ได้
             Monitor: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||24} height={p.size||24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`${p.className} ${p.overflowVisible ? 'overflow-visible' : ''}`}><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>,
             Bell: (p) => <Icon d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9 M10.3 21a1.94 1.94 0 0 0 3.4 0" {...p} />,
+            // FIXED: แก้ไข SyntaxError: Unterminated string constant.
             Check: (p) => <Icon d="M22 11.08V12a10 10 0 1 1-5.93-9.14 M22 4 12 14.01l-3-3" {...p} />,
             Clock: (p) => <Icon d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20 M12 6v6l4 2" {...p} />,
             Users: (p) => <Icon d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75" {...p} />,
@@ -124,24 +125,26 @@
             Settings: (p) => (
                 <img src="https://img2.pic.in.th/pic/settings3209826b30ab5f22.png" width={p.size||24} height={p.size||24} className={`object-contain ${p.className||''}`} alt="Settings" />
             ),
+            // FIXED: แก้ไข Unterminated string constant
             Trash: (p) => <Icon d="M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" {...p} />,
             History: (p) => <Icon d="M3 3v5h5 M3.05 13A9 9 0 1 0 6 5.3L3 8" {...p} />,
-            Skip: (p) => <Icon d="M5 4 15 12 5 20 5 4 M19 5v14" {...p} />,
+            Skip: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||24} height={p.size||24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={p.className}><polygon points="5 4 15 12 5 20 5 4" /><line x1="19" x2="19" y1="5" y2="19" /></svg>,
             Edit: (p) => <Icon d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" {...p} />,
-            Lock: (p) => <Icon d="M7 11V7a5 5 0 0 1 10 0v4 M3 11h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V11z" {...p} />,
-            QrCode: (p) => <Icon d="M3 3h7v7H3z M14 3h7v7h-7z M14 14h7v7h-7z M3 14h7v7H3z" {...p} />,
-            Scan: (p) => <Icon d="M3 7V5a2 2 0 0 1 2-2h2 M17 3h2a2 2 0 0 1 2 2v2 M21 17v2a2 2 0 0 1-2 2h-2 M7 21H5a2 2 0 0 1-2-2v-2" {...p} />,
-            Speaker: (p) => <Icon d="M11 5L6 9H2v6h4l5 4V5z" {...p} />,
-            Repeat: (p) => <Icon d="M21 1v6h-6 M3 13a9 9 0 1 0 0 2 9 9 0 0 0 0-18 M3 13v6h6 M21 13a9 9 0 1 0 0-2 9 9 0 0 0 0 18" {...p} />,
-            Power: (p) => <Icon d="M18.36 6.64a9 9 0 1 1-12.73 0 M12 2v10" {...p} />,
+            Lock: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||24} height={p.size||24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={p.className}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+            QrCode: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||24} height={p.size||24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={p.className}><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>,
+            Scan: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||24} height={p.size||24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={p.className}><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/></svg>,
+            Speaker: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||24} height={p.size||24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={p.className}><rect x="4" y="9" width="6" height="6" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /><path d="M11 5L6 9H2v6h4l5 4V5z" /></svg>,
+            Repeat: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||24} height={p.size||24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={p.className}><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>,
+            Power: (p) => <svg xmlns="http://www.w3.org/2000/svg" width={p.size||24} height={p.size||24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={p.className}><path d="M18.36 6.64a9 9 0 1 1-12.73 0" /><line x1="12" y1="2" x2="12" y2="12" /></svg>,
             Folder: (p) => <Icon d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" {...p} />,
             Search: (p) => <Icon d="M11 11a8 8 0 1 0 0 16 8 8 0 0 0 0-16 M21 21l-4.35-4.35" {...p} />,
             Sheet: (p) => <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8" {...p} />,
             Sync: (p) => <Icon d="M21.5 2v6h-6 M21.34 5.5A10 10 0 1 0 22 12 M2.5 22v-6h6 M2.66 18.5A10 10 0 1 0 2 12" {...p} />,
-            GoogleScript: (p) => <Icon d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71 M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" {...p} />,
+            GoogleScript: (p) => <Icon d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71 M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1-71" {...p} />,
+            Link2: (p) => <Icon d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71 M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" {...p} />,
+            // FIXED: เปลี่ยนไอคอน Time เป็น Clock (เดิมเป็น Time ที่มีขีด)
             Time: (p) => <Icon d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20 M12 6v6l4 2" {...p} />
         };
-        // --- END FIXED: Refactoring Icons to be self-contained SVG or simple Icon calls ---
 
         // --- UI Components ---
         const ToggleSwitch = ({ checked, onChange }) => (
@@ -290,8 +293,9 @@
         };
         // --- End Admin Login Component ---
 
-        const Toast = ({ message, type, show }) => (
-            show && (
+        const Toast = ({ message, type, show }) => {
+            if (!show) return null;
+            return (
                 <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[100] animate-pop-in">
                     <div className={`px-8 py-5 rounded-2xl shadow-2xl font-bold text-white text-xl flex flex-col items-center gap-3 min-w-[240px] text-center backdrop-blur-md border border-white/20 ${type === 'error' ? 'bg-slate-800/90 text-red-400' : 'bg-slate-800/90 text-green-400'}`}>
                         <div className={`p-4 rounded-full ${type === 'error' ? 'bg-red-500/20' : 'bg-green-500/20'} mb-1`}>
@@ -300,8 +304,8 @@
                         <span className="text-white">{message}</span>
                     </div>
                 </div>
-            )
-        );
+            );
+        };
         
         /**
          * Converts total seconds into "MM:SS" format.
@@ -312,8 +316,6 @@
             const totalSeconds = Math.max(0, Math.floor(seconds));
             const min = Math.floor(totalSeconds / 60);
             const sec = totalSeconds % 60;
-            // FIXED: เปลี่ยนการแสดงผล ETA ให้เป็น -- นาที -- วินาที ถ้าค่าเป็น 0 หรือ null/undefined
-            if (!seconds || totalSeconds === 0) return `-- นาที -- วินาที`;
             return `${String(min).padStart(2, '0')} นาที ${String(sec).padStart(2, '0')} วินาที`;
         };
         
@@ -535,11 +537,8 @@
             const [showSettings, setShowSettings] = useState(false);
             const [showHistory, setShowHistory] = useState(null); 
             const [showMyHistory, setShowMyHistory] = useState(false); 
+            // FIXED: แก้ไข Destructure Error โดยใช้ useState(null)
             const [selectedHistoryItem, setSelectedHistoryItem] = useState(null); 
-            
-            // ** NEW STATE: Sorting for History Modal **
-            // 'created_asc', 'created_desc' (Default), 'completed_asc', 'completed_desc'
-            const [sortType, setSortType] = useState('created_desc'); 
             
             // Popups & Toast State
             const [showSkipPopup, setShowSkipPopup] = useState(false);
@@ -595,6 +594,10 @@
             
             // --- NEW: Admin Session Remaining Time State ---
             const [adminSessionRemainingSeconds, setAdminSessionRemainingSeconds] = useState(0); 
+
+            // --- NEW: History Sorting State ---
+            // Options: 'booked_latest', 'booked_oldest', 'completed_latest', 'completed_oldest'
+            const [historySort, setHistorySort] = useState('booked_latest'); 
 
             const skipInputRef = useRef(null);
             const clearInputRef = useRef(null);
@@ -851,19 +854,15 @@
                     console.error("GAS Write Error:", error);
                     return false;
                 } finally {
-                    setIsGasSending(false); 
+                    setIsGasSending(false);
+                    // REMOVED: Reset success state after a short delay to keep the status persistent
+                    // setTimeout(() => setSendSuccess(false), 1500); 
                 }
             };
 
             // --- Handle Audio Enable ---
             const handleEnableAudio = () => {
-                if ("vibrate" in navigator) { try { navigator.vibrate([200, 100, 200]); } catch(e){} }
-                
-                initGlobalAudio(); 
-                
-                if (!globalAudioContext) return;
-    
-                const ctx = globalAudioContext;
+                initGlobalAudio();
                 const silentAudio = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTSVAAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////wAAAAD/84QAAAAAExAAAAAAAAABAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA//OEWoAAAB9AAAACABAAAAAAAAAAAAAA";
                 const audio = new Audio(silentAudio);
                 
@@ -1064,9 +1063,7 @@
                     const limit = aiQueueTimeHistoryLimit || 5;
                     const queuesToAverage = completedQueues.slice(0, limit);
                     
-                    const hasSufficientData = queuesToAverage.length >= 3;
-                    
-                    if (!hasSufficientData) {
+                    if (queuesToAverage.length < 3) {
                         setEtaMap({}); // Not enough data
                         return;
                     }
@@ -1678,13 +1675,6 @@
                 window.open(url.toString(), '_blank'); 
             };
 
-            // FIXED: แยกฟังก์ชันสำหรับเปิด Display Link และให้เปิดเป็นหน้าต่างใหม่เสมอ
-            const openDisplayLink = () => {
-                const url = new URL(window.location.href); 
-                url.searchParams.set('mode', 'display');
-                window.open(url.toString(), '_blank'); 
-            };
-
             const openQROnlyLink = () => { 
                 const url = new URL(window.location.href); 
                 url.searchParams.set('mode', 'qr-only'); 
@@ -1703,38 +1693,42 @@
             const currentServing = queues.find(q => q.status === 'serving');
             const myQueue = queues.find(q => q.id === myQueueId);
             
-            // --- Sorting Logic for History Modal ---
-            const sortQueues = (list, sortKey) => {
-                const sortedList = [...list];
-                switch (sortKey) {
-                    case 'created_asc': // จองคิว: เก่าสุด -> ล่าสุด
-                        return sortedList.sort((a, b) => a.createdAt - b.createdAt);
-                    case 'created_desc': // จองคิว: ล่าสุด -> เก่าสุด (Default)
-                        return sortedList.sort((a, b) => b.createdAt - a.createdAt);
-                    case 'completed_asc': // เสร็จสิ้น: เก่าสุด -> ล่าสุด
-                        // Filter only completed items that have completedAt timestamp
-                        return sortedList
-                            .filter(q => q.status === 'completed' && q.completedAt)
-                            .sort((a, b) => a.completedAt - b.completedAt);
-                    case 'completed_desc': // เสร็จสิ้น: ล่าสุด -> เก่าสุด
-                        return sortedList
-                            .filter(q => q.status === 'completed' && q.completedAt)
-                            .sort((a, b) => b.completedAt - a.completedAt);
-                    default:
-                        return sortedList.sort((a, b) => b.createdAt - a.createdAt);
-                }
-            };
-
+            // --- UPDATED: History List Logic with Sorting ---
             let historyList = [];
-            // Apply filtering first
-            let filteredQueues = queues;
-            if (showHistory && showHistory !== 'all') {
-                filteredQueues = queues.filter(q => q.status === showHistory);
+            if (showHistory) {
+                // 1. Filter by status
+                let filteredQueues = queues.filter(q => {
+                    if (q.status === 'waiting' || q.status === 'serving') return false; // Only show completed and cancelled
+                    if (showHistory === 'all') return true;
+                    return q.status === showHistory;
+                });
+
+                // 2. Apply Sorting
+                historyList = filteredQueues.sort((a, b) => {
+                    const isLatestFirst = historySort.endsWith('latest');
+                    
+                    let sortFieldA;
+                    let sortFieldB;
+
+                    if (historySort.startsWith('completed')) {
+                        // Sort by completedAt (use 0 as fallback for items that weren't completed, though theoretically shouldn't happen here)
+                        sortFieldA = a.completedAt || 0; 
+                        sortFieldB = b.completedAt || 0;
+                    } else {
+                        // Default to booked time (createdAt)
+                        sortFieldA = a.createdAt;
+                        sortFieldB = b.createdAt;
+                    }
+
+                    // Apply direction
+                    if (isLatestFirst) {
+                        return sortFieldB - sortFieldA;
+                    } else {
+                        return sortFieldA - sortFieldB;
+                    }
+                });
             }
-            // Apply sorting
-            historyList = sortQueues(filteredQueues, sortType);
-            
-            // --- END Sorting Logic ---
+            // --- END UPDATED: History List Logic with Sorting ---
 
             if (configError) return <SetupError errorMsg={errorMsg} />;
             if (loading) return <div className="h-screen flex items-center justify-center text-slate-400">กำลังเชื่อมต่อระบบ...</div>;
@@ -1754,25 +1748,423 @@
             }
             
             if (viewMode === 'admin' && !isAdminAuthenticated) return <AdminLogin onLogin={() => setIsAdminAuthenticated(true)} durationMinutes={adminSessionDuration} />;
+            // --- END ADMIN SESSION TIMEOUT CHECK ---
+
+            // Generate full QR Code URL for Display Mode (and QR Only Mode)
+            const kioskUrl = new URL(window.location.href);
+            kioskUrl.search = '';
+            kioskUrl.searchParams.set('mode', 'kiosk');
+            if(qrExpireEnabled && qrToken) {
+                 kioskUrl.searchParams.set('queue_token', qrToken);
+            }
+            // The URL used for the QR code image generation
+            const qrCodeData = kioskUrl.toString(); 
+
+            // ===============================================
+            // NEW: QR-ONLY MODE LOGIC (FOR EMBEDDING)
+            // ===============================================
+            if (viewMode === 'qr-only') {
+                 // The main container must be transparent to allow embedding with minimal fuss
+                 return (
+                    // Use min-h-screen and bg-transparent
+                    <div className="min-h-screen w-screen bg-transparent text-slate-900 flex flex-col items-center justify-center p-4">
+                        {/* FIXED: เพิ่ม bg-white คลุมทั้งบล็อก QR และข้อความกำกับ */}
+                        <div className="bg-white p-6 rounded-3xl shadow-xl border border-white/20 text-center animate-fade-in max-w-sm w-full">
+                            
+                            <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center justify-center gap-2">
+                                <Icons.QrCode size={24} className="text-indigo-600"/> สแกนเพื่อรับบัตรคิว
+                            </h2>
+
+                            <div className="bg-slate-100 p-4 rounded-xl inline-block mb-4">
+                                <img 
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCodeData)}`} 
+                                    alt="Queue QR Code" 
+                                    className="w-48 h-48 sm:w-64 sm:h-64" 
+                                    key={qrToken}
+                                />
+                            </div>
+                            
+                            <p className="text-lg font-medium text-slate-800 mb-1">คิวปัจจุบัน: <span className="font-bold text-indigo-600">{currentServing ? currentServing.number : '--'}</span></p>
+                            
+                            {/* FIXED: แสดงสถานะการหมดอายุตามที่ตั้งค่า */}
+                            {qrEnabled && qrExpireEnabled && qrTokenExpiry ? (
+                                <div className="text-sm font-bold text-red-500 mt-2 flex items-center justify-center">
+                                    <Icons.Clock size={16} className="inline-block mr-1"/> QR Code เปลี่ยนใหม่ใน: {formatCountdown(qrCountdown)}
+                                </div>
+                            ) : (qrEnabled && <div className="text-sm text-slate-500 mt-2">QR Code ไม่หมดอายุ (คงที่)</div>)}
+                            
+                            <div className="text-xs text-slate-400 mt-4">Powered by Q-Master System</div>
+
+                        </div>
+                    </div>
+                );
+            }
+
+            if (viewMode === 'kiosk') {
+                // Get ETA for my queue only in Kiosk mode
+                const myEtaSeconds = aiQueueTimeEnabled && myQueue ? etaMap[myQueue.id] : null;
+
+                return (
+                    // กล่องหลักสำหรับหน้า KIOSK
+                    <div className="h-[100dvh] w-screen bg-slate-100 flex flex-col overflow-hidden fixed inset-0">
+                        <Toast message={toast.message} type={toast.type} show={toast.show} />
+                        
+                        {/* 1. Alerts as part of layout flow - ปรับให้ใช้พื้นที่น้อยลง (p-3) */}
+                        {myQueue && myQueue.status === 'serving' && (
+                           <div className="bg-red-600 text-white p-3 animate-bounce-slow text-center shadow-lg flex flex-col items-center justify-center flex-shrink-0 z-50">
+                              <div className="lg sm:text-xl font-black flex items-center justify-center gap-2">
+                                 <Icons.Bell size={24} className="animate-pulse"/> 
+                                 คิว {myQueue.number} ถึงคิวของคุณแล้ว
+                              </div>
+                              <div className="text-xs opacity-90 mt-1">กรุณาติดต่อช่องบริการทันที</div>
+                           </div>
+                        )}
+                        
+                        {/* New: Skipped Message Area - Alert Box (Top Overlay) - ปรับให้ใช้พื้นที่น้อยลง (p-3) */}
+                        {myQueue && myQueue.status === 'waiting' && myQueue.skipCount > 0 && (
+                           <div className="bg-amber-500 text-white p-3 animate-bounce-slow text-center shadow-lg flex flex-col items-center justify-center flex-shrink-0 z-50">
+                              <div className="lg sm:text-xl font-black flex items-center justify-center gap-2">
+                                 <Icons.Skip size={24} className="animate-pulse"/> 
+                                 คุณถูกข้ามคิว
+                              </div>
+                              <div className="text-xs opacity-90 mt-1">เหตุผล: {myQueue.note} | กรุณารอเรียกอีกครั้ง</div>
+                           </div>
+                        )}
+
+                        {/* Center content wrapper */}
+                        <div className="flex-1 flex flex-col items-center justify-center p-4 w-full relative z-0">
+                        {(!myQueue || myQueue.status === 'cancelled') ? (
+                            <div className="bg-white w-full max-w-md rounded-3xl shadow-xl overflow-hidden animate-fade-in flex flex-col max-h-[90vh]">
+                                <div className="bg-indigo-600 p-6 text-white text-center">
+                                    <h1 className="text-2xl font-bold mb-2">รับบัตรคิว</h1>
+                                    <p className="text-indigo-100 text-sm">กรอกชื่อเพื่อรับคิว ({queuePrefix})</p>
+                                </div>
+                                <div className="p-6 flex-1 overflow-y-auto flex flex-col justify-center">
+                                    {/* Service Open Check */}
+                                    {serviceOpen ? (
+                                        <form onSubmit={handleBookQueue} className="space-y-6">
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 mb-2">ชื่อของคุณ</label>
+                                                <input autoFocus type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} className="w-full px-4 py-4 text-lg border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="เช่น คุณสมชาย" disabled={isSubmitting} />
+                                            </div>
+                                            <button type="submit" disabled={isSubmitting} className={`w-full text-white font-bold py-4 rounded-xl text-lg shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 ${isSubmitting ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'}`}>
+                                                {isSubmitting ? <><Icons.Loader size={24}/> กำลังบันทึก...</> : 'รับบัตรคิว'}
+                                            </button>
+                                            <div className="text-center text-slate-400 text-sm">รออยู่ <span className="text-indigo-600 font-bold">{queues.filter(q => q.status === 'waiting').length}</span> คิว</div>
+                                            
+                                            {/* Estimated Time (Kiosk Mode: Target first waiting queue - BEFORE booking) */}
+                                            {aiQueueTimeEnabled && waitingQueues.length > 0 && etaMap[waitingQueues[0].id] !== undefined && (
+                                                <div className="text-center text-sm text-green-600 font-bold bg-green-50 p-3 rounded-lg border border-green-100 animate-fade-in">
+                                                    <Icons.Time size={16} className="inline-block mr-1"/>
+                                                    คิวถัดไปคาดว่าจะใช้เวลา: {formatSecondsToMinutes(etaMap[waitingQueues[0].id])}
+                                                </div>
+                                            )}
+                                            
+                                            {historyEnabled && (
+                                                <button type="button" onClick={() => setShowMyHistory(true)} className="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-indigo-600 mt-4 text-sm font-bold transition-colors">
+                                                    <Icons.History size={16}/> ประวัติการจองของฉัน
+                                                </button>
+                                            )}
+                                        </form>
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center h-full text-center space-y-6 py-10">
+                                            <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center text-red-500 animate-pulse">
+                                                <Icons.Lock size={48} />
+                                            </div>
+                                            <div>
+                                                <h2 className="2xl font-bold text-slate-800">ปิดให้บริการ</h2>
+                                                <p className="text-slate-500 mt-2 text-lg">{closedReason}</p>
+                                            </div>
+                                            
+                                            {/* FIXED: อนุญาตให้ดูประวัติได้แม้ปิดให้บริการ & ใช้สไตล์เหมือนปุ่มหลัก */}
+                                            {historyEnabled && (
+                                                <button type="button" onClick={() => setShowMyHistory(true)} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl text-lg shadow-lg shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all flex items-center justify-center gap-2 mt-4">
+                                                    <Icons.History size={20}/> ดูประวัติการจอง
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-white w-full max-w-md rounded-3xl shadow-xl overflow-hidden animate-fade-in relative flex flex-col max-h-[90vh]">
+                                <div className="h-2 bg-gradient-to-r from-indigo-500 to-purple-500 flex-shrink-0"></div>
+                                <button onClick={() => {if(myQueue?.status !== 'serving') {localStorage.removeItem('my_queue_id'); setMyQueueId(null);}}} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 z-10"><Icons.Cross size={24}/></button>
+                                <div className="p-6 text-center space-y-4 flex-1 overflow-y-auto flex flex-col justify-center">
+                                    <div className="flex-shrink-0"><span className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-xs font-bold tracking-wide">YOUR QUEUE</span><h1 className="text-6xl sm:text-7xl font-black text-slate-800 mt-4 tracking-tighter">{myQueue.number}</h1></div>
+                                    
+                                    <div className={`flex-shrink-0 inline-flex items-center justify-center gap-2 px-6 py-2 rounded-full font-bold shadow-sm mx-auto w-fit ${myQueue.status === 'waiting' ? (myQueue.skipCount > 0 ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-amber-50 text-amber-600') : (myQueue.status === 'completed' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-green-50 text-green-600 animate-pulse')}`}>
+                                        {myQueue.status === 'waiting' ? (
+                                            myQueue.skipCount > 0 ? (
+                                                <><Icons.Skip size={20}/> ถูกข้าม: {myQueue.note}</>
+                                            ) : (
+                                                <><Icons.Clock size={20}/> กำลังรอเรียก...</>
+                                            )
+                                        ) : myQueue.status === 'completed' ? (
+                                            <><Icons.Check size={20}/> เสร็จสิ้นการรับบริการ</>
+                                        ) : (
+                                            <><Icons.Volume size={20}/> ถึงคิวคุณแล้ว!</>
+                                        )}
+                                    </div>
+
+                                    {/* Estimated Time (Kiosk Mode: Target my queue) */}
+                                    {aiQueueTimeEnabled && myQueue.status === 'waiting' && myEtaSeconds !== null && (
+                                        <div className="text-center text-sm text-green-600 font-bold bg-green-50 p-3 rounded-lg border border-green-100 animate-fade-in">
+                                            <Icons.Time size={16} className="inline-block mr-1"/>
+                                            คาดว่าคิวจะถึงใน: {formatSecondsToMinutes(myEtaSeconds)}
+                                        </div>
+                                    )}
+
+                                    <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-2 flex-shrink-0">
+                                        
+                                        {/* Booker Name - Moved Up */}
+                                        <div className="flex justify-between items-center text-sm pb-2 border-b border-slate-200">
+                                            <span className="text-slate-400 font-bold">ชื่อผู้จอง</span>
+                                            <span className="font-black text-slate-800 truncate max-w-[150px]">{myQueue.name}</span>
+                                        </div>
+
+                                        {/* Dynamic details based on status */}
+                                        {myQueue.status !== 'completed' ? (
+                                            <>
+                                                <div className="flex justify-between items-end pb-2">
+                                                    <div className="text-left">
+                                                        <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">คิวปัจจุบัน</div>
+                                                        <div className="text-2xl font-black text-indigo-600 leading-none">{currentServing ? currentServing.number : '--'}</div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">รออีก (คิว)</div>
+                                                        <div className="2xl font-black text-slate-700 leading-none">{queues.filter(q => q.status === 'waiting' && q.createdAt < myQueue.createdAt).length}</div>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            // Display Completed Status Details
+                                            <div className="space-y-2 pt-2">
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="text-slate-500">เวลาจองคิว</span>
+                                                    <span className="font-medium text-slate-700">{formatDateTime(myQueue.createdAt)}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="text-slate-500">เริ่มรับบริการ</span>
+                                                    <span className="font-medium text-slate-700">{myQueue.calledAt ? formatDateTime(myQueue.calledAt) : 'N/A'}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="text-slate-500">เสร็จสิ้นบริการ</span>
+                                                    <span className="font-medium text-green-700">{myQueue.completedAt ? formatDateTime(myQueue.completedAt) : 'N/A'}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-sm font-bold pt-2 border-t border-slate-200">
+                                                    <span className="text-slate-600">ใช้เวลาทั้งหมด</span>
+                                                    <span className="font-black text-indigo-600">{formatDuration(myQueue.durationMs)}</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        {/* QR Code Button */}
+                                        {qrEnabled && myQueue.status !== 'completed' && (
+                                            <div className="pt-2 mt-2 border-t border-slate-200">
+                                                <button onClick={() => setShowMyQR(true)} className="w-full py-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg flex items-center justify-center gap-2 text-slate-600 font-bold text-sm transition-colors">
+                                                    <Icons.QrCode size={18} /> แสดง QR Code
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* NEW: External Link Button (Only when Completed) */}
+                                        {externalLinkEnabled && myQueue.status === 'completed' && (
+                                            <div className="pt-2 mt-2 border-t border-slate-200">
+                                                <button 
+                                                    onClick={() => handleOpenExternalLink(externalLinkMapping, myQueue.number, true)} 
+                                                    className="w-full py-3 bg-blue-600 border border-blue-700 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-2 font-bold text-sm transition-colors shadow-md animate-bounce-slow"
+                                                >
+                                                    <Icons.Folder size={18} /> {externalLinkLabel || 'เปิดเอกสาร / โฟลเดอร์คิว'}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    {/* Audio Enable Button (Small) - Hide when completed */}
+                                    {!audioEnabled && myQueue.status !== 'completed' && (
+                                        <button onClick={handleEnableAudio} className="flex-shrink-0 flex items-center justify-center gap-2 w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-600 py-2 rounded-xl font-bold text-sm transition-colors border border-indigo-200">
+                                            <Icons.Speaker size={16}/> 🔔 เปิดเสียงแจ้งเตือน
+                                        </button>
+                                    )}
+
+                                    {myQueue.status !== 'completed' && (
+                                        <div className="flex-shrink-0 text-xs text-slate-400 bg-yellow-50 p-2 rounded text-center border border-yellow-100">
+                                            ⚠️ กรุณาเปิดหน้านี้ค้างไว้เพื่อรับการแจ้งเตือนเมื่อถึงคิว
+                                        </div>
+                                    )}
+
+                                    <button onClick={() => {localStorage.removeItem('my_queue_id'); setMyQueueId(null);}} className="flex-shrink-0 text-slate-400 text-sm hover:text-slate-600 underline mt-auto">จองคิวใหม่ / ออกจากหน้านี้</button>
+                                </div>
+                            </div>
+                        )}
+                        </div>
+                        
+                        {/* Footer (Q-Master Kiosk) */}
+                        <div className="p-2 text-center text-slate-400 text-xs font-medium tracking-widest uppercase flex-shrink-0">Q-Master Kiosk</div>
+
+                        {/* Customer History Modal */}
+                        {showMyHistory && (
+                            <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+                                 <div className="bg-white rounded-2xl w-full max-w-sm relative shadow-2xl flex flex-col max-h-[80vh]">
+                                     <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                                         <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Icons.History size={20}/> ประวัติการจองของฉัน</h3>
+                                         {/* Note: Customer history is ONLY stored in localStorage, which is cleared on global clear */}
+                                         <button onClick={() => setShowMyHistory(false)} className="text-slate-400 hover:text-slate-600"><Icons.Cross size={24}/></button>
+                                     </div>
+                                     <div className="p-4 overflow-y-auto flex-1">
+                                         {/* START FIX: Filter history to show only completed or cancelled queues */}
+                                         {(() => {
+                                             const localHistory = JSON.parse(localStorage.getItem('my_queue_history') || '[]');
+                                             const displayHistory = localHistory.filter(h => {
+                                                 const liveQ = queues.find(q => q.id === h.id);
+                                                 // Only show history if its live status is completed or cancelled.
+                                                 if (liveQ) {
+                                                     return liveQ.status === 'completed' || liveQ.status === 'cancelled';
+                                                 }
+                                                 return false; 
+                                             });
+
+                                             if (displayHistory.length > 0) {
+                                                 return (
+                                                     <div className="space-y-2">
+                                                         {displayHistory.map((h, i) => {
+                                                             const liveQ = queues.find(q => q.id === h.id);
+                                                             const isCompleted = liveQ && liveQ.status === 'completed';
+                                                             const isCancelled = liveQ && liveQ.status === 'cancelled';
+                                                             
+                                                             return (
+                                                                 <div 
+                                                                     key={i} 
+                                                                     onClick={() => setSelectedHistoryItem({...h, status: liveQ ? liveQ.status : 'unknown'})} 
+                                                                     className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-100 cursor-pointer hover:bg-slate-100 transition-colors"
+                                                                 >
+                                                                     <div>
+                                                                         <div className="font-bold text-indigo-600 text-lg flex items-center gap-2">
+                                                                            {h.number}
+                                                                            {isCompleted ? <Icons.Check size={14} className="text-green-500"/> : isCancelled ? <Icons.Cross size={14} className="text-red-500"/> : null}
+                                                                         </div>
+                                                                         <div className="text-xs text-slate-400">{h.date} - {h.time}</div>
+                                                                     </div>
+                                                                     <div className="text-slate-400"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg></div>
+                                                                 </div>
+                                                             );
+                                                         })}
+                                                     </div>
+                                                 );
+                                             } else {
+                                                 return (
+                                                     <div className="text-center text-slate-400 py-8">ไม่มีประวัติการจองที่เสร็จสิ้นหรือยกเลิก</div>
+                                                 );
+                                             }
+                                         })()}
+                                     </div>
+                                     <div className="p-4 border-t border-slate-100">
+                                         <button onClick={() => setShowMyHistory(false)} className="w-full bg-slate-100 text-slate-600 py-2 rounded-lg font-bold hover:bg-slate-200">ปิด</button>
+                                     </div>
+                                 </div>
+                            </div>
+                        )}
+
+                        {/* Customer History Detail Modal (Full Ticket View) */}
+                        {selectedHistoryItem && (
+                            <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+                                <div className="bg-white w-full max-w-md rounded-3xl shadow-xl overflow-hidden animate-fade-in relative flex flex-col max-h-[90vh]">
+                                    <div className="h-2 bg-gradient-to-r from-gray-400 to-gray-600 flex-shrink-0"></div>
+                                    <button onClick={() => setSelectedHistoryItem(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 z-10"><Icons.Cross size={24}/></button>
+                                    
+                                    <div className="p-6 text-center space-y-4 flex-1 overflow-y-auto flex flex-col justify-center">
+                                        <div className="flex-shrink-0"><span className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-xs font-bold tracking-wide">HISTORY TICKET</span><h1 className="text-6xl sm:text-7xl font-black text-slate-800 mt-4 tracking-tighter">{selectedHistoryItem.number}</h1></div>
+                                        
+                                        <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-2 flex-shrink-0">
+                                            <div className="flex justify-between items-center text-sm pt-1">
+                                                <span className="text-slate-400">วันที่จอง</span>
+                                                <span className="font-bold text-slate-700">{selectedHistoryItem.date} {selectedHistoryItem.time}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm pt-1">
+                                                <span className="text-slate-400">ชื่อผู้จอง</span>
+                                                <span className="font-bold text-slate-700 truncate max-w-[150px]">{selectedHistoryItem.name || '-'}</span>
+                                            </div>
+
+                                            {/* NEW: External Link Button (Only when Completed) */}
+                                            {externalLinkEnabled && selectedHistoryItem.status === 'completed' && (
+                                                <div className="pt-2 mt-2 border-t border-slate-200">
+                                                    <button 
+                                                        onClick={() => handleOpenExternalLink(externalLinkMapping, selectedHistoryItem.number, true)} 
+                                                        className="w-full py-3 bg-blue-600 border border-blue-700 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-2 font-bold text-sm transition-colors shadow-md animate-bounce-slow"
+                                                    >
+                                                        <Icons.Folder size={18} /> {externalLinkLabel || 'เปิดเอกสาร / โฟลเดอร์คิว'}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                        
+                                        <button onClick={() => setSelectedHistoryItem(null)} className="w-full bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200 mt-4">ปิดหน้าต่าง</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* QR Modal Overlay */}
+                        {showMyQR && (
+                            <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+                                 <div className="bg-white p-6 rounded-2xl w-full max-w-sm relative text-center shadow-2xl">
+                                     <button onClick={() => setShowMyQR(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><Icons.Cross size={24}/></button>
+                                     <h3 className="text-xl font-bold text-slate-800 mb-2">QR Code ของคุณ</h3>
+                                     <p className="text-slate-500 text-sm mb-6">สแกนเพื่อติดตามสถานะคิวบนมือถือ</p>
+                                     <div className="bg-slate-100 p-4 rounded-xl inline-block mb-6">
+                                         <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${myQueue.id}`} alt="QR Code" className="w-48 h-48 mix-blend-multiply mx-auto" />
+                                     </div>
+                                     <button onClick={() => setShowMyQR(false)} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700">ปิดหน้าต่าง</button>
+                                 </div>
+                            </div>
+                        )}
+                        
+                        {/* External Link Error Modal (Kiosk Mode) */}
+                        {showExternalLinkError && (
+                            <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+                                 <div className="bg-white rounded-2xl p-8 w-full max-w-xs text-center shadow-2xl border-t-4 border-red-500">
+                                     <div className="flex justify-center mb-4 text-red-500"><Icons.Alert size={40}/></div>
+                                     {/* FIXED: ใช้ข้อความตามที่ลูกค้าร้องขอ */}
+                                     <h3 className="text-xl font-bold text-slate-800">
+                                         ไม่พบลิ้งค์สำหรับคิว {showExternalLinkError.queueNumber}
+                                     </h3>
+                                     <p className="text-sm text-slate-600 mt-2">
+                                         (กรุณาติดผู้ให้บริการ)
+                                     </p>
+                                     <button onClick={() => setShowExternalLinkError(null)} className="w-full mt-6 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700">ปิด</button>
+                                 </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+
+            // ===============================================
+            // DISPLAY MODE LOGIC (Restored old 2-column layout)
+            // ===============================================
+
+            const displayQueues = queues.filter(q => q.status === 'serving' || q.status === 'waiting');
+            const currentDisplayServing = displayQueues.find(q => q.status === 'serving');
+            // Filter out the serving queue from the waiting list, sort by createdAt (oldest first) and take the first 7
+            const waitingForDisplay = displayQueues
+                .filter(q => q.status === 'waiting' && q.id !== currentDisplayServing?.id)
+                .sort((a, b) => a.createdAt - b.createdAt)
+                .slice(0, 7); 
             
-            // ===============================================
-            // DISPLAY MODE LOGIC (FULL SCREEN)
-            // ===============================================
+            // Note: qrCodeData generation is now global (line ~1088)
+
             if (viewMode === 'display') {
-                 // Note: The structure of Display Mode is simplified to remove Admin UI elements
-                 // which was the core request. The rest of the logic remains the same.
-                const displayQueues = queues.filter(q => q.status === 'serving' || q.status === 'waiting');
-                const currentDisplayServing = displayQueues.find(q => q.status === 'serving');
-                const waitingForDisplay = displayQueues
-                    .filter(q => q.status === 'waiting' && q.id !== currentDisplayServing?.id)
-                    .sort((a, b) => a.createdAt - b.createdAt)
-                    .slice(0, 7); 
                 
+                // ----------------------------------------------------
+                // START: NEW UI for "ปิดให้บริการ" (If no queues AND service is closed)
+                // ----------------------------------------------------
                 const isSystemClosed = !serviceOpen || (currentDisplayServing === undefined && waitingForDisplay.length === 0);
                 
                 if (isSystemClosed && !serviceOpen) {
                     return (
                         <div className="h-screen w-screen bg-slate-900 text-white p-8 flex flex-col items-center justify-center overflow-hidden">
+                            {/* FIXED 1: ปรับ div หลักให้เป็น flex และจัดเนื้อหาให้อยู่กึ่งกลาง (justify-center) */}
                             <div className="text-center w-full max-w-4xl flex flex-col items-center justify-center h-full"> 
                                 <div className="text-5xl font-black mb-8 text-red-500 flex items-center justify-center gap-4">
                                     <Icons.Power size={60} className="text-red-500 animate-pulse"/>
@@ -1781,6 +2173,7 @@
                                 <div className="text-[12rem] md:text-[18rem] font-black leading-none tracking-tight text-red-700/50 mb-10">
                                     CLOSED
                                 </div>
+                                {/* FIXED 2: ใช้ mx-auto เพื่อจัด span ให้อยู่กึ่งกลาง แต่ไม่ต้องเพิ่ม div หุ้ม */}
                                 <span className="text-4xl md:text-5xl font-bold block text-white mx-auto">
                                     {closedReason || 'ปิดให้บริการเพื่อปรับปรุงระบบ'}
                                 </span>
@@ -1792,6 +2185,9 @@
                         </div>
                     );
                 }
+                // ----------------------------------------------------
+                // END: NEW UI for "ปิดให้บริการ"
+                // ----------------------------------------------------
                 
                  return (
                     // FIXED: 1. เปลี่ยน min-h-screen เป็น h-screen และเพิ่ม flex-col
@@ -1873,15 +2269,13 @@
                                                     <div className="text-2xl font-black text-indigo-300 whitespace-nowrap">{q.number}</div>
                                                     
                                                     {/* NEW: Estimated Time per queue */}
-                                                    {/* FIXED: ปรับปรุงการแสดงผล ETA */}
-                                                    {aiQueueTimeEnabled && (
+                                                    {showEta ? (
                                                         <div className="text-sm text-green-400 font-bold flex items-center">
                                                             <Icons.Time size={14} className="mr-1"/> 
-                                                            {showEta 
-                                                                ? formatSecondsToMinutes(etaSeconds)
-                                                                : formatSecondsToMinutes(0)
-                                                            }
+                                                            {formatSecondsToMinutes(etaSeconds)}
                                                         </div>
+                                                    ) : (
+                                                        <div className="text-sm text-slate-500">{index + 1} คิวถัดไป</div>
                                                     )}
                                                 </div>
                                                 
@@ -1890,10 +2284,7 @@
                                                     {/* แก้ไข 1.4: ลดขนาดชื่อลูกค้าที่รอคิว */}
                                                     <div className="text-base font-medium text-slate-400 whitespace-nowrap overflow-hidden text-ellipsis max-w-[70%]">{q.name}</div>
                                                     {/* FIXED: แสดงวันที่และเวลา */}
-                                                    <span className="text-xs text-indigo-200 block font-medium flex-shrink-0">
-                                                        {/* FIXED: แสดงข้อความ "คิวถัดไป" สำหรับคิวแรกในรายการรอ */}
-                                                        {index === 0 ? "คิวถัดไป (กำลังจะเรียก)" : `คิวที่ ${index + 1} ที่รออยู่`}
-                                                    </span>
+                                                    <span className="text-xs text-indigo-200 block font-medium flex-shrink-0">{formatDateTime(q.createdAt)}</span>
                                                 </div>
                                                 
                                                 {/* Line 3: Note (Full Width with Divider) */}
@@ -1935,9 +2326,9 @@
                                             />
                                             
                                             {/* FIXED: แสดงสถานะการหมดอายุ (เปลี่ยนสีเป็น red-600) */}
-                                            {qrEnabled && qrExpireEnabled && (
+                                            {qrEnabled && qrExpireEnabled && qrTokenExpiry && (
                                                 <div className="text-[10px] text-red-600 mt-1 font-mono flex items-center justify-center">
-                                                    <Icons.Clock size={10} className="inline-block mr-0.5"/> หมดอายุใน: {qrTokenExpiry && qrCountdown > 0 ? formatCountdown(qrCountdown) : 'กำลังรีเฟรช'}
+                                                    <Icons.Clock size={10} className="inline-block mr-0.5"/> หมดอายุใน: {formatCountdown(qrCountdown)}
                                                 </div>
                                             )}
                                         </div>
@@ -1950,8 +2341,6 @@
                     </div>
                 );
             }
-
-            // --- END ADMIN SESSION TIMEOUT CHECK ---
 
             return (
                 <div className="min-h-screen bg-slate-50 pb-10 flex flex-col justify-start">
@@ -2042,16 +2431,8 @@
                                 )}
                             </div>
                             <div className="flex gap-1 bg-slate-100 p-1 rounded-lg flex-shrink-0">
-                                {/* FIXED: ปรับปุ่ม Admin/Display ให้เป็นแบบย่อบนมือถือ */}
-                                <button onClick={() => setViewMode('admin')} className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-colors ${viewMode==='admin'?'bg-white shadow text-indigo-600':'text-slate-500'}`}>
-                                    <span className="hidden sm:inline">Admin</span>
-                                    <span className="inline sm:hidden">A</span>
-                                </button>
-                                {/* FIXED: ให้ Display กดแล้วเปิดหน้าต่างใหม่ */}
-                                <button onClick={openDisplayLink} className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-colors ${viewMode==='display'?'bg-white shadow text-indigo-600':'text-slate-500'}`}>
-                                    <span className="hidden sm:inline">Display</span>
-                                    <span className="inline sm:hidden">D</span>
-                                </button>
+                                <button onClick={() => setViewMode('admin')} className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-bold ${viewMode==='admin'?'bg-white shadow text-indigo-600':'text-slate-500'}`}>Admin</button>
+                                <button onClick={() => setViewMode('display')} className={`px-3 py-1.5 rounded-md text-xs sm:text-sm font-bold ${viewMode==='display'?'bg-white shadow text-indigo-600':'text-slate-500'}`}>Display</button>
                             </div>
                             <div className="flex gap-1 sm:gap-2 flex-shrink-0">
                                 <button onClick={() => setShowScanner(true)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full flex-shrink-0 transition-colors"><Icons.Scan size={20} className="sm:w-6 sm:h-6"/></button>
@@ -2090,9 +2471,9 @@
                                             </div>
                                             <div className="flex flex-col gap-2 w-full md:w-auto md:ml-auto">
                                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                                    {/* UPDATED: Single Recall button uses Icons.Repeat and label "เรียกซ้ำ" */}
                                                     <div className="flex gap-1">
-                                                        <button onClick={() => handleRecall(currentServing.id)} className="flex-1 flex items-center justify-center gap-1 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-3 py-2 rounded-xl font-bold text-sm active:scale-95 transition-all whitespace-nowrap"><Icons.Volume size={18}/> เรียก</button>
-                                                        {/* FIXED: เปลี่ยนปุ่มเรียกซ้ำอัตโนมัติเป็นไอคอน Repeat */}
+                                                        <button onClick={() => handleRecall(currentServing.id)} className="flex-1 flex items-center justify-center gap-1 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-3 py-2 rounded-xl font-bold text-sm active:scale-95 transition-all whitespace-nowrap"><Icons.Repeat size={18}/> เรียกซ้ำ</button>
                                                         <button onClick={() => setShowAutoRecallModal(true)} className="flex items-center justify-center bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-2 py-2 rounded-xl font-bold text-sm active:scale-95 transition-all" title="เรียกซ้ำอัตโนมัติ"><Icons.Repeat size={18}/></button>
                                                     </div>
                                                     <button onClick={(e) => { e.preventDefault(); openSkipPopup(currentServing); }} className="flex items-center justify-center gap-1 bg-amber-100 text-amber-700 hover:bg-amber-200 px-3 py-2 rounded-xl font-bold text-sm active:scale-95 transition-all whitespace-nowrap"><Icons.Skip size={18}/> ข้าม</button>
@@ -2153,13 +2534,15 @@
                                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sticky top-24">
                                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-4">ภาพรวมวันนี้ (กดเพื่อดูประวัติ)</h3>
                                     <div className="space-y-3">
-                                        <button onClick={() => setShowHistory('all')} className="w-full flex justify-between items-center p-4 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors">
+                                        {/* UPDATED: Add setHistorySort('booked_latest') as default */}
+                                        <button onClick={() => { setShowHistory('all'); setHistorySort('booked_latest'); }} className="w-full flex justify-between items-center p-4 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors">
                                             <span className="text-slate-600 font-medium">ทั้งหมด</span>
                                             <span className="text-2xl font-black text-slate-800">{queues.length}</span>
                                         </button>
-                                        {/* FIXED: Admin Summary Boxes - text-2xl font-black */}
-                                        <button onClick={() => setShowHistory('completed')} className="w-full flex justify-between items-center p-4 bg-green-50 hover:bg-green-100 rounded-xl transition-colors text-green-700"><span className="font-medium flex items-center gap-2"><Icons.History size={16}/> เสร็จสิ้น</span><span className="text-2xl font-black">{queues.filter(q => q.status==='completed').length}</span></button>
-                                        <button onClick={() => setShowHistory('cancelled')} className="w-full flex justify-between items-center p-4 bg-red-50 hover:bg-red-100 rounded-xl transition-colors text-red-700"><span className="font-medium flex items-center gap-2"><Icons.History size={16}/> ยกเลิก</span><span className="text-2xl font-black">{queues.filter(q => q.status==='cancelled').length}</span></button>
+                                        {/* UPDATED: Add setHistorySort('completed_latest') as default */}
+                                        <button onClick={() => { setShowHistory('completed'); setHistorySort('completed_latest'); }} className="w-full flex justify-between items-center p-4 bg-green-50 hover:bg-green-100 rounded-xl transition-colors text-green-700"><span className="font-medium flex items-center gap-2"><Icons.History size={16}/> เสร็จสิ้น</span><span className="text-2xl font-black">{queues.filter(q => q.status==='completed').length}</span></button>
+                                        {/* UPDATED: Add setHistorySort('booked_latest') as default */}
+                                        <button onClick={() => { setShowHistory('cancelled'); setHistorySort('booked_latest'); }} className="w-full flex justify-between items-center p-4 bg-red-50 hover:bg-red-100 rounded-xl transition-colors text-red-700"><span className="font-medium flex items-center gap-2"><Icons.History size={16}/> ยกเลิก</span><span className="text-2xl font-black">{queues.filter(q => q.status==='cancelled').length}</span></button>
                                     </div>
                                 </div>
                             </div>
@@ -2168,13 +2551,11 @@
 
                     {showScanner && (
                         <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[70]">
-                            <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl animate-fade-in relative border-t-4 border-indigo-500">
-                                <h2 className="font-bold text-xl mb-4 text-center text-indigo-700 flex items-center justify-center gap-2">
-                                    <Icons.Scan size={24}/> สแกน QR Code เพื่อจัดการคิว
-                                </h2>
-                                <div id="reader" className="w-full bg-slate-100 rounded-lg overflow-hidden min-h-[300px] border border-slate-300 shadow-inner"></div>
-                                <p className="text-xs text-center text-slate-500 mt-4">วาง QR Code ให้อยู่ในกรอบสแกน</p>
-                                <button onClick={() => setShowScanner(false)} className="absolute top-2 right-2 text-slate-400 hover:text-red-600 transition-colors p-2 rounded-full"><Icons.Cross size={24}/></button>
+                            <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl animate-fade-in relative">
+                                <button onClick={() => setShowScanner(false)} className="absolute top-2 right-2 text-slate-400 hover:text-slate-600"><Icons.Cross size={24}/></button>
+                                <h2 className="font-bold text-xl mb-4 text-center">สแกน QR Code</h2>
+                                <div id="reader" className="w-full bg-slate-100 rounded-lg overflow-hidden min-h-[300px]"></div>
+                                <p className="text-xs text-center text-slate-400 mt-2">วาง QR Code ให้อยู่ในกรอบ</p>
                             </div>
                         </div>
                     )}
@@ -2385,10 +2766,9 @@
                                                 >
                                                     สร้าง QR Code ใหม่ทันที
                                                 </button>
-                                                {/* FIXED: เพิ่มการแสดงเวลานับถอยหลังใน Settings Modal */}
                                                 {qrEnabled && qrTokenExpiry && (
                                                      <div className="text-xs text-slate-500 text-center">
-                                                         **เปลี่ยนใหม่ใน:** <span className="font-bold text-red-600">{qrCountdown > 0 ? formatCountdown(qrCountdown) : 'กำลังรีเฟรช'}</span>
+                                                         QR Code จะหมดอายุใน: {formatCountdown(qrCountdown)}
                                                      </div>
                                                 )}
                                             </div>
@@ -2463,7 +2843,7 @@
                                                             type="text" 
                                                             value={gasWebAppUrl || ''} 
                                                             onChange={e => setGasWebAppUrl(e.target.value)} 
-                                                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
+                                                            className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
                                                             placeholder="https://script.google.com/..." 
                                                         />
                                                         <p className="text-[10px] text-slate-400 mt-1">ใช้สำหรับดึงลิ้งค์ (A-B) และส่งลิ้งค์ (C1)</p>
@@ -2606,49 +2986,49 @@
                     {showHistory && (
                         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                             <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl animate-fade-in h-[80vh] flex flex-col">
-                                {/* HEADER - History Modal Header */}
-                                <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 relative">
-                                    {/* FIXED: หัวข้อและจำนวนรายการ (แยกบรรทัดบนมือถือ) */}
-                                    <div className="flex flex-col flex-grow min-w-0">
+                                
+                                {/* UPDATED: Header for Mobile Layout */}
+                                <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 flex-shrink-0">
+                                    <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <h2 className="font-bold text-lg flex items-center gap-2">
+                                            <h2 className="font-bold text-xl flex items-center gap-2">
                                                 <Icons.History/> 
+                                                {/* "ประวัติทั้งหมด" หรือ "รายการเสร็จสิ้น/ยกเลิก" */}
                                                 {showHistory === 'all' ? 'ประวัติทั้งหมด' : (showHistory === 'completed' ? 'รายการเสร็จสิ้น' : 'รายการยกเลิก')}
                                             </h2>
-                                            {/* จำนวนรายการ: แสดงบรรทัดเดียวกับหัวข้อบนจอใหญ่, ย้ายไปอยู่ด้านล่างหัวข้อบนจอมือถือ */}
-                                            <span className="text-base text-slate-500 font-medium ml-1 hidden sm:inline">({historyList.length} รายการ)</span>
-                                            <span className="text-sm text-slate-500 font-medium sm:hidden">({historyList.length} รายการ)</span>
                                         </div>
+                                        {/* "จำนวนรายการ" - แยกบรรทัดบนมือถือ */}
+                                        <span className="text-base text-slate-500 font-medium ml-1 block sm:inline">({historyList.length} รายการ)</span>
                                     </div>
                                     
-                                    {/* ปุ่มล้างข้อมูลและกากบาท (อยู่ขวาบน) */}
-                                    <div className="flex gap-2 items-center flex-shrink-0 absolute top-4 right-4 sm:static sm:order-last">
+                                    {/* Right side buttons: Clear and Close (Moved Clear to top right) */}
+                                    <div className="flex gap-2 items-center flex-shrink-0">
+                                        {/* Clear Button */}
                                         {showHistory === 'all' && (
-                                            <button onClick={() => setShowClearPopup(true)} className="text-xs text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors">
+                                            <button onClick={() => setShowClearPopup(true)} className="text-xs text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors font-bold">
                                                 <Icons.Trash size={12}/> ล้างข้อมูล
                                             </button>
                                         )}
-                                        <button onClick={() => setShowHistory(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><Icons.Cross size={24}/></button>
+                                        {/* Close Button */}
+                                        <button onClick={() => setShowHistory(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><Icons.Cross/></button>
                                     </div>
                                 </div>
-
-                                {/* Sorting Controls */}
-                                <div className="p-4 border-b border-slate-100 bg-slate-50">
-                                    <label className="text-xs font-bold text-slate-600 mb-2 block">จัดเรียงตาม:</label>
-                                    
-                                    {/* Dropdown for Sorting */}
-                                    <select
-                                        value={sortType}
-                                        onChange={(e) => setSortType(e.target.value)}
-                                        className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                
+                                {/* UPDATED: Sorting Dropdown (ใต้ Header) */}
+                                <div className="px-4 sm:px-6 py-3 border-b border-slate-100 flex-shrink-0">
+                                     <select 
+                                        value={historySort}
+                                        onChange={(e) => setHistorySort(e.target.value)}
+                                        className="w-full sm:w-64 border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 bg-white shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                                     >
-                                        <option value="created_desc">จองคิว: ล่าสุด -> เก่าสุด (ค่าพื้นฐาน)</option>
-                                        <option value="created_asc">จองคิว: เก่าสุด -> ล่าสุด</option>
+                                        <option value="booked_latest">จองคิว: ล่าสุด {"->"} เก่าสุด (ค่าพื้นฐาน)</option>
+                                        <option value="booked_oldest">จองคิว: เก่าสุด {"->"} ล่าสุด</option>
+                                        {/* Only show completed sort if we are looking at 'all' or 'completed' status */}
                                         {(showHistory === 'all' || showHistory === 'completed') && (
-                                            <option value="completed_desc">เสร็จสิ้น: ล่าสุด -> เก่าสุด</option>
-                                        )}
-                                        {(showHistory === 'all' || showHistory === 'completed') && (
-                                            <option value="completed_asc">เสร็จสิ้น: เก่าสุด -> ล่าสุด</option>
+                                            <>
+                                                <option value="completed_latest">เสร็จสิ้น: ล่าสุด {"->"} เก่าสุด</option>
+                                                <option value="completed_oldest">เสร็จสิ้น: เก่าสุด {"->"} ล่าสุด</option>
+                                            </>
                                         )}
                                     </select>
                                 </div>
@@ -2656,35 +3036,40 @@
                                 {/* List Content */}
                                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
                                     {historyList.length > 0 ? historyList.map(q => (
-                                        <div key={q.id} className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors">
-                                            <div className="flex justify-between items-start mb-1">
-                                                {/* เลขคิวและสถานะ + ชื่อผู้จอง */}
-                                                <div className="flex flex-col gap-0.5">
-                                                    <div className="flex items-center gap-2">
+                                        <div key={q.id} className="p-4 bg-slate-50 rounded-xl border border-slate-200 shadow-sm hover:bg-slate-100 transition-colors">
+                                            
+                                            {/* UPDATED: Item Layout - Q Number + Status (Line 1), Name (Line 2) */}
+                                            <div className="flex justify-between items-start mb-2">
+                                                <div className="flex flex-col">
+                                                    <div className="flex items-center gap-3">
                                                         <div className="text-xl font-black text-indigo-600">{q.number}</div>
-                                                        {getStatusBadge(q.status)}
+                                                        {/* Status next to number */}
+                                                        {getStatusBadge(q.status)} 
                                                     </div>
-                                                    {/* FIXED: ชื่อผู้จอง (สีดำ ตัวเล็ก) */}
-                                                    <div className="text-sm text-slate-800 font-medium">
+                                                    {/* Name below number */}
+                                                    <div className="font-medium text-slate-800 text-sm mt-0.5">
                                                         คุณ {q.name}
                                                     </div>
                                                 </div>
-
-                                                {/* ปุ่มจัดการ */}
-                                                <div className="flex gap-1 items-start flex-shrink-0">
-                                                    {/* FIXED: ปุ่มเรียกซ้ำใช้ไอคอนลำโพง */}
-                                                    <button onClick={() => handleRecall(q.id)} className="text-xs bg-white border border-indigo-200 px-2 sm:px-2.5 py-1.5 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 shadow-sm flex items-center gap-1 font-medium transition-all">
-                                                        <Icons.Speaker size={14} className="text-indigo-600"/>
-                                                        <span className="hidden sm:inline">เรียกซ้ำ</span>
-                                                    </button>
+                                                
+                                                <div className="flex gap-2 flex-shrink-0">
+                                                     {/* NEW: Recall Button for history items (Optional, only for completed/cancelled) */}
+                                                    {(q.status === 'completed' || q.status === 'cancelled') && (
+                                                        <button 
+                                                            onClick={() => handleRecall(q.id)} 
+                                                            className="text-indigo-600 hover:text-indigo-800 p-1 rounded-full hover:bg-indigo-100 transition-colors" 
+                                                            title="เรียกคิวอีกครั้ง"
+                                                        >
+                                                            <Icons.Repeat size={16}/>
+                                                        </button>
+                                                    )}
                                                     <button onClick={() => setShowEditPopup({ queue: q })} className="text-slate-400 hover:text-indigo-600 p-1 rounded-full hover:bg-slate-200"><Icons.Edit size={16}/></button>
                                                     <button onClick={() => setShowConfirmPopup({ id: q.id, type: 'delete' })} className="text-red-400 hover:text-red-600 p-1 rounded-full hover:bg-red-100"><Icons.Trash size={16}/></button>
                                                 </div>
                                             </div>
-
                                             
-                                            {/* FIXED: Time Details Table */}
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-slate-600 mt-2 pt-2 border-t border-slate-100">
+                                            {/* Time Details Table (unchanged) */}
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-slate-600 mt-2 border-t border-slate-100 pt-2">
                                                 <div className="col-span-2 md:col-span-1">
                                                     <div className="text-slate-400">จองคิว</div>
                                                     <div className="font-medium">{formatDateTime(q.createdAt)}</div>
@@ -2703,7 +3088,6 @@
                                                 </div>
                                             </div>
                                             
-                                            {/* REMOVED: q.note และ q.skipCount display from history list item */}
                                         </div>
                                     )) : <div className="text-center text-slate-400 mt-10">ไม่มีข้อมูล</div>}
                                 </div>

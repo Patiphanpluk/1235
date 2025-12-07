@@ -558,6 +558,8 @@
             const [qrTokenExpiry, setQrTokenExpiry] = useState(null); // Milliseconds timestamp or null
             const [qrCountdown, setQrCountdown] = useState(0); // Seconds
 
+            // Request 2: New state for the countdown display text
+            const [countdown, setCountdown] = useState(""); 
             
             // --- NEW: Time estimation for specific queues (to track countdown on display/kiosk) ---
             const [etaMap, setEtaMap] = useState({}); // {queueId: seconds_remaining}
@@ -1138,11 +1140,11 @@
 
 
             // --- QR Code Auto-Update Logic (Display Mode/Admin Mode) ---
+            // Request 2: Logic for managing countdown display in UI
             useEffect(() => {
                 let interval = null;
                 
                 // Check if expiration is actually enabled (expire time > 0)
-                // Request 4/6: Check for both qrExpireEnabled and qrExpireTime > 0
                 const isQrExpirationActive = qrExpireEnabled && qrExpireTime > 0;
                 
                 const updateToken = () => {
@@ -1155,7 +1157,6 @@
                         const timeSinceLastUpdate = now - (expiry - expiryMs);
                         
                         // If expired (expiry <= now) or approaching the refresh time (e.g., within a tolerance, or just check elapsed time)
-                        // Note: The logic `timeSinceLastUpdate >= expiryMs` effectively checks if a full interval has passed since the token *should* have been created/refreshed.
                         if (!qrTokenExpiry || expiry <= now || timeSinceLastUpdate >= expiryMs) {
                             const newToken = generateUniqueToken();
                             console.log(`Generating new QR token: ${newToken}`);
@@ -1164,27 +1165,47 @@
                     }
                 };
 
-                // Update countdown every second
-                interval = setInterval(() => {
+                // Request 2: Start Countdown function
+                const startCountdown = () => {
+                     // Check if expiration is actually enabled (qrExpireTime > 0)
                     if (isQrExpirationActive && qrTokenExpiry) {
                         const now = Date.now();
                         const remaining = qrTokenExpiry - now;
                         setQrCountdown(Math.max(0, Math.floor(remaining / 1000)));
 
-                        if (remaining <= 0) {
-                             updateToken(); // Generate new token when countdown hits zero or time passes
-                        }
+                        interval = setInterval(() => {
+                            setQrCountdown(prev => {
+                                const newTime = Math.max(0, prev - 1);
+                                if (newTime === 0) {
+                                    updateToken(); // Generate new token when countdown hits zero or time passes
+                                }
+                                // Request 2: Update countdown display text
+                                setCountdown(formatCountdown(newTime));
+                                return newTime;
+                            });
+                        }, 1000);
+
                     } else {
                         // If expiration is disabled or infinite (qrExpireTime <= 0), countdown is 0
                         setQrCountdown(0); 
+                        setCountdown("");
                     }
-                }, 1000);
+                }
 
                 // Run once on mount to check if token needs refresh
                 updateToken();
+                // Start the countdown logic if necessary on component load/update
+                if (qrEnabled && qrExpireTime > 0) {
+                    startCountdown();
+                } else {
+                    setCountdown(""); // Clear countdown if not active
+                }
 
-                return () => clearInterval(interval);
-            }, [services, user, qrExpireEnabled, qrExpireTime, qrTokenExpiry]);
+
+                return () => { 
+                    if (interval) clearInterval(interval);
+                };
+            }, [services, user, qrEnabled, qrExpireEnabled, qrExpireTime, qrTokenExpiry]); 
             
             const formatCountdown = (seconds) => {
                 const totalSeconds = Math.max(0, Math.floor(seconds));
@@ -1287,7 +1308,7 @@
                 
                 // Check if QR Expiration is active (qrExpireEnabled && qrExpireTime > 0)
                 // Request 3: เงื่อนไขการตรวจสอบคิวอาร์หมดอายุ
-                const isQrExpirationActive = qrExpireEnabled && qrExpireTime > 0;
+                const isQrExpirationActive = qrEnabled && qrExpireTime > 0;
                 
                 if (isQrExpirationActive) {
                      // Check if token is present, if it matches the current token, and if it has not expired
@@ -1806,7 +1827,7 @@
                                 {/* Request 2: Countdown ใต้ QR Code (Display Mode / QR Only) */}
                                 {isQrExpirationActiveAndFinite && (
                                     <div className="text-sm font-bold text-red-600 mt-3 flex items-center justify-center animate-pulse">
-                                        <Icons.Clock size={16} className="inline-block mr-1"/> QR Code เปลี่ยนใหม่ใน: {formatCountdown(qrCountdown)}
+                                        <Icons.Clock size={16} className="inline-block mr-1"/> QR Code เปลี่ยนใหม่ใน: {countdown}
                                     </div>
                                 )}
                             </div>
@@ -2142,7 +2163,13 @@
                                      <div className="bg-slate-100 p-4 rounded-xl inline-block mb-6">
                                          <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${myQueue.id}`} alt="QR Code" className="w-48 h-48 mix-blend-multiply mx-auto" />
                                      </div>
-                                     <button onClick={() => setShowMyQR(false)} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700">ปิดหน้าต่าง</button>
+                                     {/* Request 2: เพิ่มการแสดงผลเวลานับถอยหลังใต้ QR Code ใน Kiosk Modal */}
+                                     {qrEnabled && Number(qrExpireTime) > 0 && (
+                                        <div className="text-center mt-3 text-lg font-semibold text-red-600">
+                                            เหลือเวลา {countdown}
+                                        </div>
+                                     )}
+                                     <button onClick={() => setShowMyQR(false)} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 mt-4">ปิดหน้าต่าง</button>
                                  </div>
                             </div>
                         )}
@@ -2358,7 +2385,7 @@
                                             {/* Request 2: Countdown ใต้ QR Code (Display Mode / QR Only) */}
                                             {isQrExpirationActiveAndFinite && (
                                                 <div className="text-[10px] text-red-600 mt-1 font-mono font-bold flex items-center justify-center animate-pulse">
-                                                    <Icons.Clock size={10} className="inline-block mr-0.5"/> หมดอายุใน: {formatCountdown(qrCountdown)}
+                                                    <Icons.Clock size={10} className="inline-block mr-0.5"/> หมดอายุใน: {countdown}
                                                 </div>
                                             )}
                                             {/* END NEW QR CODE TIMER */}
@@ -3062,7 +3089,7 @@
                         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                             <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl animate-fade-in h-[80vh] flex flex-col">
                                 
-                                {/* UPDATED: Header for History Modal - Combined Title/Count and Buttons/Dropdown */}
+                                {/* Request 1: แก้ไข div สำหรับปุ่ม Clear และ Close */}
                                 <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 flex-shrink-0">
                                     
                                     {/* Left Side: Title + Item Count */}
@@ -3078,16 +3105,16 @@
                                         <span className="text-sm text-slate-500 font-medium ml-1 block">({historyList.length} รายการ)</span>
                                     </div>
                                     
-                                    {/* Right Side Buttons: Clear and Close */}
-                                    <div className="flex gap-2 items-start flex-shrink-0 sm:self-start">
+                                    {/* Right Side Buttons: Clear and Close - แก้ไขให้ใช้ flex-end และ flex-nowrap */}
+                                    <div className="flex gap-2 items-center justify-end flex-shrink-0 flex-nowrap w-full sm:w-auto">
                                         {/* Clear Button */}
                                         {showHistory === 'all' && (
-                                            <button onClick={() => setShowClearPopup(true)} className="text-xs text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors font-bold">
+                                            <button onClick={() => setShowClearPopup(true)} className="text-xs text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors font-bold flex-shrink-0">
                                                 <Icons.Trash size={12}/> ล้างข้อมูล
                                             </button>
                                         )}
                                         {/* Close Button */}
-                                        <button onClick={() => setShowHistory(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><Icons.Cross size={24}/></button>
+                                        <button onClick={() => setShowHistory(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors flex-shrink-0"><Icons.Cross size={24}/></button>
                                     </div>
 
                                 </div>
